@@ -20,6 +20,7 @@ print("Version info:", sys.version_info)
 
 
 DEBUG_FLAG = 0
+VERBOSE_LEVEL = 1
 
 
 # In[ ]:
@@ -41,6 +42,12 @@ def log_debug(*args,**kwargs):
     print('D: ', end='')
     print(*args,**kwargs)
 
+def log_info(*args,**kwargs):
+  """Print message only if VERBOSE_LEVEL > 0."""
+  if VERBOSE_LEVEL > 0:
+    print('I: ', end='')
+    print(*args,**kwargs)
+
 def read_file_to_str(filename):
   """Read a file's content into one string."""
   with open(filename, 'r') as inputfile:
@@ -54,6 +61,12 @@ def read_file_to_list(filename):
   #lines_list = [line.rstrip('\n') for line in lines_list] # via list comprehension
   lines_list = list(map(lambda it: it.rstrip(), lines_list)) # via map
   return lines_list
+
+def lrange(*args,**kwargs):
+  return list(range(*args,**kwargs))
+
+def lmap(*args,**kwargs):
+  return list(map(*args,**kwargs))
 
 
 # ## Problem domain code
@@ -643,6 +656,100 @@ assert( 4 == solve4b(tests_valid) )
 
 result = solve4b(ins)
 print("Day 4 b result:", result)
+
+
+# ### Day 5: Binary Boarding
+
+# In[ ]:
+
+
+DEBUG_FLAG = 1
+
+
+# In[ ]:
+
+
+import functools
+import operator
+
+# see: [python - How to make a flat list out of list of lists? - Stack Overflow](https://stackoverflow.com/questions/952914/how-to-make-a-flat-list-out-of-list-of-lists)
+def flatten_list(l):
+  """Flatten a list."""
+  return functools.reduce(operator.iconcat, l, [])
+
+def get_seat_id(s):
+  rows = lrange(0, 128)
+  cols = lrange(0, 8)
+  #log_debug(cols)
+  for c in s:
+    if c == 'F':
+      rows = rows[:len(rows)//2]
+    elif c == 'B':
+      rows = rows[len(rows)//2:]
+    elif c == 'L':
+      cols = cols[:len(cols)//2]
+    elif c == 'R':
+      cols = cols[len(cols)//2:]
+  result_list = flatten_list([rows, cols])
+  log_debug(result_list)
+  return result_list[0]*8 + result_list[1]
+
+
+# In[ ]:
+
+
+boardingpass = 'FBFBBFFRLR'
+get_seat_id(boardingpass)
+
+
+# In[ ]:
+
+
+assert(357 == get_seat_id('FBFBBFFRLR'))
+
+
+# In[ ]:
+
+
+assert(567 == get_seat_id('BFFFBBFRRR'))
+assert(119 == get_seat_id('FFFBBBFRRR'))
+assert(820 == get_seat_id('BBFFBBFRLL'))
+
+
+# In[ ]:
+
+
+DEBUG_FLAG = 0
+ins = read_file_to_list('./in/day05.in')
+print( "Day 5 a solution:", max(map(get_seat_id, ins)) )
+
+
+# In[ ]:
+
+
+print("number of boarding passes given:", (len(ins)))
+#print("number of used rows in plane:", (len(ins)+1)/8.0)
+
+
+# In[ ]:
+
+
+min_seat_id = 0*8 + 0
+max_seat_id = 127*8 + 7
+print("seat_id min/max", [min_seat_id, max_seat_id])
+
+
+# In[ ]:
+
+
+seat_ids = lrange(min_seat_id, max_seat_id+1)
+for boardingpass in ins: # remove used/given seat_id
+  seat_ids.remove(get_seat_id(boardingpass))
+print("ids remain unseen:")
+print(seat_ids)
+for seat_id in seat_ids:
+  if not( (seat_id-1) in seat_ids and (seat_id>min_seat_id) )     and not( (seat_id+1) in seat_ids and (seat_id<max_seat_id) ):
+    print("(Day 5 b solution) found id:", seat_id)
 
 
 # In[ ]:
