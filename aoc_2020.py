@@ -112,18 +112,21 @@ import numpy as np
 
 def solve01a(l):
   for v in itertools.combinations(l, 2):
-    v = np.array(v)
+    v = np.array(v) # using numpy for elegance, array "object" methods .sum() and .prod()
     #print(v)
     if v.sum() == THIS_YEAR:
-      print(f"found {v}")
+      log_info(f"found {v}")
       p = v.prod()
-      print(f"product={p}")
+      log_debug(f"product={p}")
+      break
+  return p
 
 
 # In[ ]:
 
 
-solve01a(tests)
+result = solve01a(tests)
+print("tests solution", result)
 
 
 # In[ ]:
@@ -136,7 +139,8 @@ ins = list(map(int, read_file_to_list('./in/day01.in')))
 # In[ ]:
 
 
-solve01a(ins)
+result = solve01a(ins)
+print("Day 1 a solution:", result)
 
 
 # In[ ]:
@@ -147,9 +151,10 @@ def solve01b(l):
     v = np.array(v)
     #print(v)
     if v.sum() == THIS_YEAR:
-      print(f"found {v}")
+      log_info(f"found {v}")
       p = v.prod() #np.prod(np.array(v))
-      print(f"product={p}")
+      log_debug(f"product={p}")
+      break
   return p
 
 
@@ -163,7 +168,7 @@ print("test results:", solve01b(tests))
 # In[ ]:
 
 
-print("solution:", solve01b(ins))
+print("Day 1 b solution:", solve01b(ins))
 
 
 # ### Day 2: Password Philosophy
@@ -189,7 +194,7 @@ tests = test_str.split("\n")
 # In[ ]:
 
 
-def solve2a(l):
+def solve02a(l):
   ct = 0
   for line in l:
     rules, pwd = line.split(': ')
@@ -202,26 +207,28 @@ def solve2a(l):
       ct += 1
     #else:
     #  print("  pwd is INvalid")
-  print(f"num of valid passwords={ct}")
+  log_debug(f"num of valid passwords={ct}")
+  return ct
 
 
 # In[ ]:
 
 
-print("tests:", solve2a(tests))
+result = solve02a(tests)
+print("tests result:", result)
 
 
 # In[ ]:
 
 
 ins = read_file_to_list('./in/day02.in')
-print("solution:", solve2a(ins))
+print("Day 2 a solution:", solve02a(ins))
 
 
 # In[ ]:
 
 
-def solve2b(l):
+def solve02b(l):
   ct = 0
   for line in l:
     rules, pwd = line.split(': ')
@@ -234,7 +241,7 @@ def solve2b(l):
       ct += 1
     #else:
     #  print("  pwd is INvalid")
-  print(f"num of valid passwords={ct}")
+  log_debug(f"num of valid passwords={ct}")
   return ct
 
 
@@ -243,22 +250,22 @@ def solve2b(l):
 
 print("Day 2 b")
 print("assert day 2 b test conditions")
-assert( 1 == solve2b([tests[0]]) )
-assert( 0 == solve2b([tests[1]]) )
-assert( 0 == solve2b([tests[2]]) )
+assert( 1 == solve02b([tests[0]]) )
+assert( 0 == solve02b([tests[1]]) )
+assert( 0 == solve02b([tests[2]]) )
 print("assertions were ok.")
 
 
 # In[ ]:
 
 
-solve2b(tests)
+print("tests result:", solve02b(tests))
 
 
 # In[ ]:
 
 
-solve2b(ins)
+print("Day 2 b solution:", solve02b(ins))
 
 
 # ### Day 3: Toboggan Trajectory
@@ -304,10 +311,10 @@ log_debug(tests)
 # In[ ]:
 
 
-def solve3a(l2d):
+def solve03a(l2d):
   num_rows = len(l2d)
   num_cols = len(l2d[0])
-  print(f"num rows={num_rows}, cols={num_cols}")
+  log_info(f"num rows={num_rows}, cols={num_cols}")
   posx, posy = [0, 0]
   dx, dy = [3, 1]
   ct = 0
@@ -323,20 +330,22 @@ def solve3a(l2d):
     posy += dy
     #print(f"new pos={[posx, posy]}")
     if posy > num_rows-1:
-      print(f"break at iter#={iter}")
+      log_debug(f"break at iter#={iter}")
       break
     else:
       iter += 1
   outstr = f"encountered {ct} trees."
   if DEBUG_FLAG > 0:
     outstr += f"Path={tpath}"
-  print(outstr)
+  log_info(outstr)
+  return ct
 
 
 # In[ ]:
 
 
-solve3a(tests)
+print("Day 3 a tests:")
+print(solve03a(tests))
 
 
 # In[ ]:
@@ -348,13 +357,14 @@ ins = prepare_input(read_file_to_list('./in/day03.in'))
 # In[ ]:
 
 
-solve3a(ins)
+result = solve03a(ins)
+print("Day 3 a solution:", result)
 
 
 # In[ ]:
 
 
-def solve3b(l2d, vec):
+def solve03b(l2d, vec):
   num_rows = len(l2d)
   num_cols = len(l2d[0])
   log_debug(f"num rows={num_rows}, cols={num_cols}, vector={vec}")
@@ -387,25 +397,25 @@ print("Day 3 b")
 
 
 print("assert day 3 b test conditions:")
-assert( 2 == solve3b(tests, [1, 1]))
-assert( 7 == solve3b(tests, [3, 1]))
-assert( 3 == solve3b(tests, [5, 1]))
-assert( 4 == solve3b(tests, [7, 1]))
-assert( 2 == solve3b(tests, [1, 2]))
+assert( 2 == solve03b(tests, [1, 1]))
+assert( 7 == solve03b(tests, [3, 1]))
+assert( 3 == solve03b(tests, [5, 1]))
+assert( 4 == solve03b(tests, [7, 1]))
+assert( 2 == solve03b(tests, [1, 2]))
 print("assertions were ok.")
 
 
 # In[ ]:
 
 
-p = solve3b(tests, [1, 1]) * solve3b(tests, [3, 1]) * solve3b(tests, [5, 1])     * solve3b(tests, [7, 1]) * solve3b(tests, [1, 2])
+p = solve03b(tests, [1, 1]) * solve03b(tests, [3, 1]) * solve03b(tests, [5, 1])     * solve03b(tests, [7, 1]) * solve03b(tests, [1, 2])
 print("day 3 b test result (product):", p)
 
 
 # In[ ]:
 
 
-p = solve3b(ins, [1, 1]) * solve3b(ins, [3, 1]) * solve3b(ins, [5, 1])       * solve3b(ins, [7, 1]) * solve3b(ins, [1, 2])
+p = solve03b(ins, [1, 1]) * solve03b(ins, [3, 1]) * solve03b(ins, [5, 1])       * solve03b(ins, [7, 1]) * solve03b(ins, [1, 2])
 print("day 3 b solution (product):", p)
 
 
@@ -471,7 +481,7 @@ def passport_valid(passport):
 # In[ ]:
 
 
-def solve4a(passports):
+def solve04a(passports):
   ct = 0
   for passport in passports:
     if passport_valid(passport):
@@ -483,14 +493,14 @@ def solve4a(passports):
 # In[ ]:
 
 
-print("tests valid-count:", solve4a(tests))
+print("tests valid-count:", solve04a(tests))
 
 
 # In[ ]:
 
 
 ins = read_file_to_str('./in/day04.in').split("\n\n")
-print("solution 4 a valid-count:", solve4a(ins))
+print("Day 4 a solution: valid-count:", solve04a(ins))
 
 
 # In[ ]:
@@ -592,8 +602,9 @@ pid:3556412378 byr:2
 # In[ ]:
 
 
+print("tests, all invalid:")
 for passport in tests_invalid:
-  print(passport)
+  print(passport.replace("\n", " "))
   print("valid?:", passport_valid2(passport))
   print()
 
@@ -620,8 +631,9 @@ iyr:2010 hgt:158cm hcl:#b6652a ecl:blu byr:1944 eyr:2021 pid:093154719
 # In[ ]:
 
 
+print("tests, all valid:")
 for passport in tests_valid:
-  print(passport)
+  print(passport.replace("\n", " "))
   print("valid?:", passport_valid2(passport))
   print()
 
@@ -629,7 +641,7 @@ for passport in tests_valid:
 # In[ ]:
 
 
-def solve4b(passports):
+def solve04b(passports):
   ct = 0
   for passport in passports:
     log_debug(passport)
@@ -642,29 +654,23 @@ def solve4b(passports):
 # In[ ]:
 
 
-assert( 0 == solve4b(tests_invalid) )
+assert( 0 == solve04b(tests_invalid) )
 
 
 # In[ ]:
 
 
-assert( 4 == solve4b(tests_valid) )
+assert( 4 == solve04b(tests_valid) )
 
 
 # In[ ]:
 
 
-result = solve4b(ins)
+result = solve04b(ins)
 print("Day 4 b result:", result)
 
 
 # ### Day 5: Binary Boarding
-
-# In[ ]:
-
-
-DEBUG_FLAG = 1
-
 
 # In[ ]:
 
@@ -705,6 +711,7 @@ get_seat_id(boardingpass)
 # In[ ]:
 
 
+# Given tests:
 assert(357 == get_seat_id('FBFBBFFRLR'))
 
 
@@ -719,7 +726,6 @@ assert(820 == get_seat_id('BBFFBBFRLL'))
 # In[ ]:
 
 
-DEBUG_FLAG = 0
 ins = read_file_to_list('./in/day05.in')
 print( "Day 5 a solution:", max(map(get_seat_id, ins)) )
 
@@ -730,12 +736,8 @@ print( "Day 5 a solution:", max(map(get_seat_id, ins)) )
 print("number of boarding passes given:", (len(ins)))
 #print("number of used rows in plane:", (len(ins)+1)/8.0)
 
-
-# In[ ]:
-
-
-min_seat_id = 0*8 + 0
-max_seat_id = 127*8 + 7
+min_seat_id = 0*8 + 0  # from min row and min column/seat
+max_seat_id = 127*8 + 7  # from max row and max column/seat
 print("seat_id min/max", [min_seat_id, max_seat_id])
 
 
@@ -745,11 +747,160 @@ print("seat_id min/max", [min_seat_id, max_seat_id])
 seat_ids = lrange(min_seat_id, max_seat_id+1)
 for boardingpass in ins: # remove used/given seat_id
   seat_ids.remove(get_seat_id(boardingpass))
-print("ids remain unseen:")
-print(seat_ids)
+log_debug("ids remain unseen:")
+log_debug(seat_ids)
 for seat_id in seat_ids:
   if not( (seat_id-1) in seat_ids and (seat_id>min_seat_id) )     and not( (seat_id+1) in seat_ids and (seat_id<max_seat_id) ):
     print("(Day 5 b solution) found id:", seat_id)
+
+
+# ### Day 6: Custom Customs
+
+# In[ ]:
+
+
+DEBUG_FLAG = 0
+
+
+# In[ ]:
+
+
+test_str = """
+abcx
+abcy
+abcz
+""".strip()
+test = test_str.split("\n")
+log_debug(test)
+
+
+# In[ ]:
+
+
+from collections import defaultdict
+
+
+# In[ ]:
+
+
+def get_group_answers(answers_in):
+  answers = defaultdict(int)
+  for tanswers in answers_in:
+    for tanswer in tanswers:
+      answers[tanswer] += 1
+  log_debug(answers)
+  log_debug(len(answers.keys()), answers.keys())
+  return answers
+
+
+# In[ ]:
+
+
+print("testing...", get_group_answers(test))
+
+
+# In[ ]:
+
+
+assert( 6 == len(get_group_answers(test).keys()) )
+
+
+# In[ ]:
+
+
+test_str = """
+abc
+
+a
+b
+c
+
+ab
+ac
+
+a
+a
+a
+a
+
+b
+""".strip()
+tests = test_str.split("\n\n")
+log_debug(tests)
+
+
+# In[ ]:
+
+
+def solve06a(groupanswers):
+  i = 0
+  for groupanswer in groupanswers:
+    result = get_group_answers(groupanswer.split("\n")).keys()
+    log_debug(f"distinctanswers={result} for {groupanswer}")
+    i += len(result)
+  log_debug(f"answerssum={i}")
+  return i
+
+
+# In[ ]:
+
+
+assert( 11 == solve06a(tests) )
+print("test assertion ok.")
+
+
+# In[ ]:
+
+
+ins = read_file_to_str('./in/day06.in').split("\n\n")
+print("Day 6 a solution: groupanwers-sum:", solve06a(ins))
+
+
+# In[ ]:
+
+
+print("Day 6 b")
+
+
+# In[ ]:
+
+
+def get_group_answers2(answers_in):
+  answers = defaultdict(int)
+  num_persons = len(answers_in)
+  for tanswers in answers_in:
+    for tanswer in tanswers:
+      answers[tanswer] += 1
+  log_debug(answers)
+  log_debug(len(answers.keys()), answers.keys())
+  ct = 0
+  #for idx, (key, val) in enumerate(d.items()):
+  for key, val in answers.items():
+    if val == num_persons:
+      ct += 1
+  return ct
+
+def solve06b(groupanswers):
+  i = 0
+  for groupanswer in groupanswers:
+    result = get_group_answers2(groupanswer.split("\n"))
+    log_debug(f"all-answers={result} for {groupanswer}")
+    i += result
+  log_info(f"all-answers-sum={i}")
+  return i
+
+
+# In[ ]:
+
+
+assert( 6 == solve06b(tests) )
+print("test assertion ok.")
+
+
+# In[ ]:
+
+
+print("Day 6 b solution: groupanwers-sum:", solve06b(ins))
 
 
 # In[ ]:
