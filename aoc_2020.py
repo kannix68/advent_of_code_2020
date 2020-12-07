@@ -48,6 +48,11 @@ def log_info(*args,**kwargs):
     print('I: ', end='')
     print(*args,**kwargs)
 
+def log_error(*args,**kwargs):
+  """Print error message."""
+  print('E: ', end='')
+  print(*args,**kwargs)
+
 def read_file_to_str(filename):
   """Read a file's content into one string."""
   with open(filename, 'r') as inputfile:
@@ -901,6 +906,221 @@ print("test assertion ok.")
 
 
 print("Day 6 b solution: groupanwers-sum:", solve06b(ins))
+
+
+# ### Day 7: Handy Haversacks
+
+# In[ ]:
+
+
+DEBUG_FLAG = 0
+
+
+# In[ ]:
+
+
+import networkx as nx
+
+
+# In[ ]:
+
+
+test_str = """
+light red bags contain 1 bright white bag, 2 muted yellow bags.
+dark orange bags contain 3 bright white bags, 4 muted yellow bags.
+bright white bags contain 1 shiny gold bag.
+muted yellow bags contain 2 shiny gold bags, 9 faded blue bags.
+shiny gold bags contain 1 dark olive bag, 2 vibrant plum bags.
+dark olive bags contain 3 faded blue bags, 4 dotted black bags.
+vibrant plum bags contain 5 faded blue bags, 6 dotted black bags.
+faded blue bags contain no other bags.
+dotted black bags contain no other bags.
+""".strip()
+tests = test_str.split("\n")
+log_debug(test)
+
+
+# In[ ]:
+
+
+def get_bag_graph(l):
+  graph = nx.DiGraph()
+  for line in l:
+    try:
+      src, trg = line.split(" bags contain ")
+    except ValueError:
+      log_error(f"parse error, input=>{line}<")
+    bags_contained = trg.replace(".", "").split(", ")
+    if not (len(bags_contained) == 1 and bags_contained[0].startswith("no other")):
+      graph.add_node(src)
+      for idx, bag_in in enumerate(bags_contained):
+        rxm = re.match(r"^(\d+)\s+(.*?)\s+bag", bag_in)
+        res = [int(rxm.group(1)), rxm.group(2)]
+        #log_debug("src:", src, "; trg:", res)
+        bags_contained[idx] = res
+        graph.add_node(res[1])
+        #log_debug(f"add_edge {src} => {res[0]} {res[1]}")
+        graph.add_edge(src, res[1], weight=res[0])
+    else:
+      graph.add_edge(src, "END", weight=0)
+    #print(src, bags_contained)
+  log_info( "graph # of nodes:", len(graph.nodes()) )
+  log_info( "graph # of edges:", len(graph.edges()) )
+  return graph
+
+
+# In[ ]:
+
+
+graph = get_bag_graph(tests)
+for e in graph.edges():
+  log_debug(e, nx.get_edge_attributes(graph, 'weight')[e])
+
+
+# In[ ]:
+
+
+def get_paths_to(graph, trg):
+  paths = []
+  for src in graph.nodes():
+    #log_debug("src:", src)
+    for p in nx.all_simple_paths(graph, src, trg):
+      paths.append(p)
+  return paths
+
+
+# In[ ]:
+
+
+def solve07a(l, trg):
+  graph = get_bag_graph(l)
+  sources = lmap(lambda it: it[0], get_paths_to(graph, trg))
+  num_sources = len(set(sources))
+  return num_sources
+
+
+# In[ ]:
+
+
+trg = 'shiny gold'
+assert( 4 == solve07a(tests, trg) )
+
+
+# In[ ]:
+
+
+ins = read_file_to_str('./in/day07.in').strip().split("\n")
+print("Day 7 a solution: num-distinct-src-colors", solve07a(ins, 'shiny gold'))
+
+
+# In[ ]:
+
+
+print("Day 7 b")
+
+
+# In[ ]:
+
+
+edge_weights = nx.get_edge_attributes(graph, 'weight')
+
+#for p in nx.all_simple_edge_paths(graph, 'shiny gold', "END"): # not available
+seen_subpaths = []
+for p in nx.all_simple_paths(graph, 'shiny gold', "END"):
+  log_debug(p)
+  for snode_idx in range(len(p)-1):
+    tup = tuple([p[snode_idx], p[snode_idx+1]])
+    subpath = tuple(p[0:snode_idx+2])
+    log_debug("subpath:", subpath)
+    if not subpath in seen_subpaths:
+      seen_subpaths.append(subpath)
+      log_debug("    new subpath")
+    else:
+      log_debug("    already SEEN subpath")
+    log_debug(f"  path-edge#{snode_idx}: {tup} {edge_weights[tup]}")
+  log_debug(seen_subpaths)
+  
+
+
+# In[ ]:
+
+
+# see: [python - Getting subgraph of nodes between two nodes? - Stack Overflow](https://stackoverflow.com/questions/32531117/getting-subgraph-of-nodes-between-two-nodes)
+def subgraph_between(graph, start_node, end_node):
+  paths_between_generator = nx.all_simple_paths(graph, source=start_node,target=end_node)
+  nodes_between_set = {node for path in paths_between_generator for node in path}
+  return( graph.subgraph(nodes_between_set) )
+
+
+# In[ ]:
+
+
+subgraph = subgraph_between(graph, 'shiny gold', 'END')
+for p in subgraph.edges:
+  log_debug(p)
+log_info("sub-paths for shiny gold:")
+for p in nx.all_simple_paths(subgraph, 'shiny gold', "END"):
+  log_info(p)
+
+
+# In[ ]:
+
+
+edge_weights = nx.get_edge_attributes(graph, 'weight')
+seen_subpaths = []
+for p in nx.all_simple_paths(graph, 'shiny gold', "END"):
+  log_debug(p)
+  for start_idx in reversed(range(len(p)-2)):
+    seen = False
+    subpath = tuple(p[0:start_idx+2])
+    if not subpath in seen_subpaths:
+      seen_subpaths.append(subpath)
+    else:
+      seen = True
+    tup = tuple([p[start_idx], p[start_idx+1]])
+    w = edge_weights[tup]
+    log_debug(f"  subedge={tup}, weight={w}; subpath={subpath}, seen={seen}")
+
+
+# In[ ]:
+
+
+# Personal solution to day 7 a UNFINISHED.
+clr = 'shiny gold'
+clr_edges = filter(lambda it: it[0]==clr, list(graph.edges))
+for edge in clr_edges:
+  log_debug(edge, edge_weights[edge])
+
+
+# In[ ]:
+
+
+# "Inspiration" soltion, copied/stolen from user el-guish's solution in:
+# [- 2020 Day 07 Solutions - : adventofcode](https://www.reddit.com/r/adventofcode/comments/k8a31f/2020_day_07_solutions/)
+# Using recursion.
+
+rules = open('in/day07.in').readlines()
+
+def parse_rule(r):
+  parent, contents = r[:-2].split(' bags contain ')
+  childs =  [parse_child_bag(c) for c in contents.split(',') if c != 'no other bags' and c != 'no other bag']
+  return (parent, childs)
+
+def parse_child_bag(child_st):
+  cparts = child_st.split()
+  qty = int(cparts[0])
+  color = ' '.join(cparts[1:-1])
+  return (color, qty)
+
+def required_contents(bag_color):
+  return sum(q + q * required_contents(color) for color, q in contains[bag_color] )
+
+contains = dict(parse_rule(r) for r in test_str.split("\n"))
+log_debug("test rules (parsed):", contains)
+print("tests result", required_contents('shiny gold'))
+
+contains = dict(parse_rule(r) for r in rules)
+print("Day 7 b solution", required_contents('shiny gold'))
 
 
 # In[ ]:
