@@ -12,66 +12,17 @@
 
 
 import sys
+import logging
+
+import lib.aochelper as aoc
+from lib.aochelper import map_list as mapl
+from lib.aochelper import filter_list as filterl
+
 print("Python version:", sys.version)
 print("Version info:", sys.version_info)
 
-
-# In[ ]:
-
-
-DEBUG_FLAG = 0
-VERBOSE_LEVEL = 1
-
-
-# In[ ]:
-
-
-# Code functions
-
-def assert_msg(msg, assertion):
-  """Assert boolean condition with message, ok=message printed, otherwise assertion-fail."""
-  assert assertion, "ERROR on assert: {}".format(msg)
-  print("assert-OK: {}".format(msg))
-
-def expect_msg(msg, expected, inputs):
-  assert_msg(msg.format(inputs, expected), expected == solve(inputs))
-
-def log_debug(*args,**kwargs):
-  """Print message only if DEBUG_FLAG > 0."""
-  if DEBUG_FLAG > 0:
-    print('D: ', end='')
-    print(*args,**kwargs)
-
-def log_info(*args,**kwargs):
-  """Print message only if VERBOSE_LEVEL > 0."""
-  if VERBOSE_LEVEL > 0:
-    print('I: ', end='')
-    print(*args,**kwargs)
-
-def log_error(*args,**kwargs):
-  """Print error message."""
-  print('E: ', end='')
-  print(*args,**kwargs)
-
-def read_file_to_str(filename):
-  """Read a file's content into one string."""
-  with open(filename, 'r') as inputfile:
-    data = inputfile.read()
-  return data
-
-def read_file_to_list(filename):
-  """Read a file's content into a list of strings (per line), each ending whitespace stripped."""
-  with open(filename, 'r') as inputfile:
-    lines_list = inputfile.readlines()
-  #lines_list = [line.rstrip('\n') for line in lines_list] # via list comprehension
-  lines_list = list(map(lambda it: it.rstrip(), lines_list)) # via map
-  return lines_list
-
-def lrange(*args,**kwargs):
-  return list(range(*args,**kwargs))
-
-def lmap(*args,**kwargs):
-  return list(map(*args,**kwargs))
+log = aoc.getLogger(__name__)
+print(f"initial log-level={log.getEffectiveLevel()}")
 
 
 # ## Problem domain code
@@ -101,7 +52,7 @@ test_str = """
 675
 1456""".strip()
 tests = list(map(int, test_str.split("\n")))
-log_debug(tests)
+log.warning(tests)
 
 
 # In[ ]:
@@ -120,9 +71,9 @@ def solve01a(l):
     v = np.array(v) # using numpy for elegance, array "object" methods .sum() and .prod()
     #print(v)
     if v.sum() == THIS_YEAR:
-      log_info(f"found {v}")
+      log.info(f"found {v}")
       p = v.prod()
-      log_debug(f"product={p}")
+      log.debug(f"product={p}")
       break
   return p
 
@@ -137,7 +88,7 @@ print("tests solution", result)
 # In[ ]:
 
 
-ins = list(map(int, read_file_to_list('./in/day01.in')))
+ins = list(map(int, aoc.read_file_to_list('./in/day01.in')))
 #ins
 
 
@@ -156,9 +107,9 @@ def solve01b(l):
     v = np.array(v)
     #print(v)
     if v.sum() == THIS_YEAR:
-      log_info(f"found {v}")
+      log.info(f"found {v}")
       p = v.prod() #np.prod(np.array(v))
-      log_debug(f"product={p}")
+      log.debug(f"product={p}")
       break
   return p
 
@@ -212,7 +163,7 @@ def solve02a(l):
       ct += 1
     #else:
     #  print("  pwd is INvalid")
-  log_debug(f"num of valid passwords={ct}")
+  log.debug(f"num of valid passwords={ct}")
   return ct
 
 
@@ -226,7 +177,7 @@ print("tests result:", result)
 # In[ ]:
 
 
-ins = read_file_to_list('./in/day02.in')
+ins = aoc.read_file_to_list('./in/day02.in')
 print("Day 2 a solution:", solve02a(ins))
 
 
@@ -246,7 +197,7 @@ def solve02b(l):
       ct += 1
     #else:
     #  print("  pwd is INvalid")
-  log_debug(f"num of valid passwords={ct}")
+  log.debug(f"num of valid passwords={ct}")
   return ct
 
 
@@ -298,7 +249,7 @@ test_str = """
 .#..#...#.#
 """.strip()
 tests = test_str.split("\n")
-log_debug(tests)
+log.debug(tests)
 
 
 # In[ ]:
@@ -310,7 +261,7 @@ def prepare_input(l):
     outlist.append(list(map(lambda it: 1 if it == '#' else 0, list(line))))
   return outlist
 tests = prepare_input(tests)
-log_debug(tests)
+log.debug(tests)
 
 
 # In[ ]:
@@ -319,7 +270,7 @@ log_debug(tests)
 def solve03a(l2d):
   num_rows = len(l2d)
   num_cols = len(l2d[0])
-  log_info(f"num rows={num_rows}, cols={num_cols}")
+  log.info(f"num rows={num_rows}, cols={num_cols}")
   posx, posy = [0, 0]
   dx, dy = [3, 1]
   ct = 0
@@ -335,14 +286,14 @@ def solve03a(l2d):
     posy += dy
     #print(f"new pos={[posx, posy]}")
     if posy > num_rows-1:
-      log_debug(f"break at iter#={iter}")
+      log.debug(f"break at iter#={iter}")
       break
     else:
       iter += 1
   outstr = f"encountered {ct} trees."
-  if DEBUG_FLAG > 0:
+  if log.getEffectiveLevel() <= logging.DEBUG:
     outstr += f"Path={tpath}"
-  log_info(outstr)
+  log.info(outstr)
   return ct
 
 
@@ -356,7 +307,7 @@ print(solve03a(tests))
 # In[ ]:
 
 
-ins = prepare_input(read_file_to_list('./in/day03.in'))
+ins = prepare_input(aoc.read_file_to_list('./in/day03.in'))
 
 
 # In[ ]:
@@ -372,7 +323,7 @@ print("Day 3 a solution:", result)
 def solve03b(l2d, vec):
   num_rows = len(l2d)
   num_cols = len(l2d[0])
-  log_debug(f"num rows={num_rows}, cols={num_cols}, vector={vec}")
+  log.debug(f"num rows={num_rows}, cols={num_cols}, vector={vec}")
   posx, posy = [0, 0]
   dx, dy = vec #reversed(vec)
   ct = 0
@@ -383,11 +334,11 @@ def solve03b(l2d, vec):
     posx += dx
     posy += dy
     if posy > num_rows-1:
-      log_debug(f"break at iter#={iter}")
+      log.debug(f"break at iter#={iter}")
       break
     else:
       iter += 1
-  log_debug(f"encountered {ct} trees.")
+  log.debug(f"encountered {ct} trees.")
   return ct
 
 
@@ -429,12 +380,6 @@ print("day 3 b solution (product):", p)
 # In[ ]:
 
 
-DEBUG_FLAG = 0
-
-
-# In[ ]:
-
-
 fields_mandat = {'byr', 'iyr', 'eyr', 'hgt', 'hcl', 'ecl', 'pid'}
 fields_opt = {'cid'}
 
@@ -458,7 +403,7 @@ hcl:#cfa07d eyr:2025 pid:166559648
 iyr:2011 ecl:brn hgt:59in
 """.strip()
 tests = test_str.split("\n\n")
-log_debug(tests)
+log.debug(tests)
 
 
 # In[ ]:
@@ -472,14 +417,14 @@ import re
 
 def passport_valid(passport):
   entries = re.split(r'\s+', passport)
-  log_debug(entries)
+  log.debug(entries)
   fields = []
   for entry in entries:
     field = entry.split(':')[0]
     fields.append(field)
-  #log_debug(sorted(fields))
+  #log.debug(sorted(fields))
   b = fields_mandat.issubset(fields)
-  log_debug("valid?:", b)
+  log.debug(f"valid?: {b}")
   return b
 
 
@@ -491,7 +436,7 @@ def solve04a(passports):
   for passport in passports:
     if passport_valid(passport):
       ct +=1
-  log_debug("valid-count:", ct)
+  log.debug(f"valid-count: {ct}")
   return ct
 
 
@@ -504,7 +449,7 @@ print("tests valid-count:", solve04a(tests))
 # In[ ]:
 
 
-ins = read_file_to_str('./in/day04.in').split("\n\n")
+ins = aoc.read_file_to_str('./in/day04.in').split("\n\n")
 print("Day 4 a solution: valid-count:", solve04a(ins))
 
 
@@ -513,16 +458,16 @@ print("Day 4 a solution: valid-count:", solve04a(ins))
 
 def passport_valid2(passport):
   entries = re.split(r'\s+', passport)
-  log_debug(entries)
+  log.debug(entries)
   fields = []
   values = []
   for entry in entries:
     field, val = entry.split(':')
     fields.append(field)
     values.append(val)
-  #log_debug(sorted(fields))
+  #log.debug(sorted(fields))
   if not fields_mandat.issubset(fields):
-    log_debug("invalid: mandatory fields missing")
+    log.debug("invalid: mandatory fields missing")
     return False 
   for idx, field in enumerate(fields):
     val = values[idx]
@@ -530,19 +475,19 @@ def passport_valid2(passport):
       # byr (Birth Year) - four digits; at least 1920 and at most 2002.
       ival = int(val)
       if not (ival >= 1920 and ival <= 2002):
-        log_debug(f"invalid: byr value {val}")
+        log.debug(f"invalid: byr value {val}")
         return False
     elif field == 'iyr':
       # iyr (Issue Year) - four digits; at least 2010 and at most 2020.
       ival = int(val)
       if not (ival >= 2010 and ival <= THIS_YEAR):
-        log_debug(f"invalid: iyr value {val}")
+        log.debug(f"invalid: iyr value {val}")
         return False
     elif field == 'eyr':
       # eyr (Expiration Year) - four digits; at least 2020 and at most 2030
       ival = int(val)
       if not (ival >= THIS_YEAR and ival <= 2030):
-        log_debug(f"invalid: eyr value {val}")
+        log.debug(f"invalid: eyr value {val}")
         return False
     elif field == 'hgt':
       # hgt (Height) - a number followed by either cm or in:
@@ -550,37 +495,37 @@ def passport_valid2(passport):
       # - If in, the number must be at least 59 and at most 76.
       # py-regex: ^(\d+)(?=cm|in)(cm|in)$
       if not re.match(r'^\d+(cm|in)$', val):
-        log_debug(f"invalid: hgt val={val}, form.")
+        log.debug(f"invalid: hgt val={val}, form.")
         return False
       numstr, unit = re.split(r'(?=cm|in)', val)
       num = int(numstr)
       if unit == 'cm':
         if not (num >= 150 and num <= 193):
-          log_debug(f"invalid: hgt val={val} num={num}")
+          log.debug(f"invalid: hgt val={val} num={num}")
           return False
       elif unit == 'in':
         if not (num >= 59 and num <= 76):
-          log_debug(f"invalid: hgt val={val} num={num}")
+          log.debug(f"invalid: hgt val={val} num={num}")
           return False
       else:
-        log_debug(f"invalid: hgt val={val} unit={unit}")
+        log.debug(f"invalid: hgt val={val} unit={unit}")
         return False
     elif field == 'hcl':
       # hcl (Hair Color) - a # followed by exactly six characters 0-9 or a-f.
       if not re.match(r'^#[0-9a-f]{6}$', val):
-        log_debug(f"invalid: hcl value {val}")
+        log.debug(f"invalid: hcl value {val}")
         return False
     elif field == 'ecl':
       # ecl (Eye Color) - exactly one of: amb blu brn gry grn hzl oth.
       if not val in ['amb', 'blu', 'brn', 'gry', 'grn', 'hzl', 'oth']:
-        log_debug(f"invalid: ecl value {val}")
+        log.debug(f"invalid: ecl value {val}")
         return False
     elif field == 'pid':
       # pid (Passport ID) - a nine-digit number, including leading zeroes.
       if not re.match(r'^[0-9]{9}$', val):
-        log_debug(f"invalid: pid value {val}")
+        log.debug(f"invalid: pid value {val}")
         return False
-  log_debug("valid!")
+  log.debug("valid!")
   return True
 
 
@@ -649,10 +594,10 @@ for passport in tests_valid:
 def solve04b(passports):
   ct = 0
   for passport in passports:
-    log_debug(passport)
+    log.debug(passport)
     if passport_valid2(passport):
       ct +=1
-  log_debug("valid-count:", ct)
+  log.debug(f"valid-count: {ct}")
   return ct
 
 
@@ -689,9 +634,9 @@ def flatten_list(l):
   return functools.reduce(operator.iconcat, l, [])
 
 def get_seat_id(s):
-  rows = lrange(0, 128)
-  cols = lrange(0, 8)
-  #log_debug(cols)
+  rows = aoc.range_list(0, 128)
+  cols = aoc.range_list(0, 8)
+  #log.debug(cols)
   for c in s:
     if c == 'F':
       rows = rows[:len(rows)//2]
@@ -702,7 +647,7 @@ def get_seat_id(s):
     elif c == 'R':
       cols = cols[len(cols)//2:]
   result_list = flatten_list([rows, cols])
-  log_debug(result_list)
+  log.debug(result_list)
   return result_list[0]*8 + result_list[1]
 
 
@@ -731,7 +676,7 @@ assert(820 == get_seat_id('BBFFBBFRLL'))
 # In[ ]:
 
 
-ins = read_file_to_list('./in/day05.in')
+ins = aoc.read_file_to_list('./in/day05.in')
 print( "Day 5 a solution:", max(map(get_seat_id, ins)) )
 
 
@@ -749,11 +694,11 @@ print("seat_id min/max", [min_seat_id, max_seat_id])
 # In[ ]:
 
 
-seat_ids = lrange(min_seat_id, max_seat_id+1)
+seat_ids = aoc.range_list(min_seat_id, max_seat_id+1)
 for boardingpass in ins: # remove used/given seat_id
   seat_ids.remove(get_seat_id(boardingpass))
-log_debug("ids remain unseen:")
-log_debug(seat_ids)
+log.debug("ids remain unseen:")
+log.debug(seat_ids)
 for seat_id in seat_ids:
   if not( (seat_id-1) in seat_ids and (seat_id>min_seat_id) )     and not( (seat_id+1) in seat_ids and (seat_id<max_seat_id) ):
     print("(Day 5 b solution) found id:", seat_id)
@@ -764,19 +709,13 @@ for seat_id in seat_ids:
 # In[ ]:
 
 
-DEBUG_FLAG = 0
-
-
-# In[ ]:
-
-
 test_str = """
 abcx
 abcy
 abcz
 """.strip()
 test = test_str.split("\n")
-log_debug(test)
+log.debug(test)
 
 
 # In[ ]:
@@ -793,8 +732,8 @@ def get_group_answers(answers_in):
   for tanswers in answers_in:
     for tanswer in tanswers:
       answers[tanswer] += 1
-  log_debug(answers)
-  log_debug(len(answers.keys()), answers.keys())
+  #log.debug(answers)
+  #log.debug(f"len={len(answers.keys())}, vals={answers.keys()}")
   return answers
 
 
@@ -831,7 +770,7 @@ a
 b
 """.strip()
 tests = test_str.split("\n\n")
-log_debug(tests)
+log.debug(tests)
 
 
 # In[ ]:
@@ -841,9 +780,9 @@ def solve06a(groupanswers):
   i = 0
   for groupanswer in groupanswers:
     result = get_group_answers(groupanswer.split("\n")).keys()
-    log_debug(f"distinctanswers={result} for {groupanswer}")
+    #log.debug(f"distinctanswers={result} for {groupanswer}")
     i += len(result)
-  log_debug(f"answerssum={i}")
+  log.info(f"answerssum={i}")
   return i
 
 
@@ -857,7 +796,7 @@ print("test assertion ok.")
 # In[ ]:
 
 
-ins = read_file_to_str('./in/day06.in').split("\n\n")
+ins = aoc.read_file_to_str('./in/day06.in').split("\n\n")
 print("Day 6 a solution: groupanwers-sum:", solve06a(ins))
 
 
@@ -876,8 +815,8 @@ def get_group_answers2(answers_in):
   for tanswers in answers_in:
     for tanswer in tanswers:
       answers[tanswer] += 1
-  log_debug(answers)
-  log_debug(len(answers.keys()), answers.keys())
+  #log.debug(answers)
+  #log.debug(len(answers.keys()), answers.keys())
   ct = 0
   #for idx, (key, val) in enumerate(d.items()):
   for key, val in answers.items():
@@ -889,9 +828,9 @@ def solve06b(groupanswers):
   i = 0
   for groupanswer in groupanswers:
     result = get_group_answers2(groupanswer.split("\n"))
-    log_debug(f"all-answers={result} for {groupanswer}")
+    #log.debug(f"all-answers={result} for {groupanswer}")
     i += result
-  log_info(f"all-answers-sum={i}")
+  log.info(f"all-answers-sum={i}")
   return i
 
 
@@ -909,12 +848,6 @@ print("Day 6 b solution: groupanwers-sum:", solve06b(ins))
 
 
 # ### Day 7: Handy Haversacks
-
-# In[ ]:
-
-
-DEBUG_FLAG = 0
-
 
 # In[ ]:
 
@@ -937,7 +870,7 @@ faded blue bags contain no other bags.
 dotted black bags contain no other bags.
 """.strip()
 tests = test_str.split("\n")
-log_debug(test)
+log.debug(test)
 
 
 # In[ ]:
@@ -949,23 +882,23 @@ def get_bag_graph(l):
     try:
       src, trg = line.split(" bags contain ")
     except ValueError:
-      log_error(f"parse error, input=>{line}<")
+      log.error(f"parse error, input=>{line}<")
     bags_contained = trg.replace(".", "").split(", ")
     if not (len(bags_contained) == 1 and bags_contained[0].startswith("no other")):
       graph.add_node(src)
       for idx, bag_in in enumerate(bags_contained):
         rxm = re.match(r"^(\d+)\s+(.*?)\s+bag", bag_in)
         res = [int(rxm.group(1)), rxm.group(2)]
-        #log_debug("src:", src, "; trg:", res)
+        #log.debug("src:", src, "; trg:", res)
         bags_contained[idx] = res
         graph.add_node(res[1])
-        #log_debug(f"add_edge {src} => {res[0]} {res[1]}")
+        #log.debug(f"add_edge {src} => {res[0]} {res[1]}")
         graph.add_edge(src, res[1], weight=res[0])
     else:
       graph.add_edge(src, "END", weight=0)
     #print(src, bags_contained)
-  log_info( "graph # of nodes:", len(graph.nodes()) )
-  log_info( "graph # of edges:", len(graph.edges()) )
+  log.info( f"graph # of nodes: {len(graph.nodes())}" )
+  log.info( f"graph # of edges: {len(graph.edges())}" )
   return graph
 
 
@@ -974,7 +907,7 @@ def get_bag_graph(l):
 
 graph = get_bag_graph(tests)
 for e in graph.edges():
-  log_debug(e, nx.get_edge_attributes(graph, 'weight')[e])
+  log.debug(f"  edge: {e} attrs={nx.get_edge_attributes(graph, 'weight')[e]}")
 
 
 # In[ ]:
@@ -983,7 +916,7 @@ for e in graph.edges():
 def get_paths_to(graph, trg):
   paths = []
   for src in graph.nodes():
-    #log_debug("src:", src)
+    #log.debug("src:", src)
     for p in nx.all_simple_paths(graph, src, trg):
       paths.append(p)
   return paths
@@ -994,7 +927,7 @@ def get_paths_to(graph, trg):
 
 def solve07a(l, trg):
   graph = get_bag_graph(l)
-  sources = lmap(lambda it: it[0], get_paths_to(graph, trg))
+  sources = aoc.map_list(lambda it: it[0], get_paths_to(graph, trg))
   num_sources = len(set(sources))
   return num_sources
 
@@ -1009,7 +942,7 @@ assert( 4 == solve07a(tests, trg) )
 # In[ ]:
 
 
-ins = read_file_to_str('./in/day07.in').strip().split("\n")
+ins = aoc.read_file_to_str('./in/day07.in').strip().split("\n")
 print("Day 7 a solution: num-distinct-src-colors", solve07a(ins, 'shiny gold'))
 
 
@@ -1027,18 +960,18 @@ edge_weights = nx.get_edge_attributes(graph, 'weight')
 #for p in nx.all_simple_edge_paths(graph, 'shiny gold', "END"): # not available
 seen_subpaths = []
 for p in nx.all_simple_paths(graph, 'shiny gold', "END"):
-  log_debug(p)
+  log.debug(p)
   for snode_idx in range(len(p)-1):
     tup = tuple([p[snode_idx], p[snode_idx+1]])
     subpath = tuple(p[0:snode_idx+2])
-    log_debug("subpath:", subpath)
+    log.debug(f"subpath: {subpath}")
     if not subpath in seen_subpaths:
       seen_subpaths.append(subpath)
-      log_debug("    new subpath")
+      log.debug("    new subpath")
     else:
-      log_debug("    already SEEN subpath")
-    log_debug(f"  path-edge#{snode_idx}: {tup} {edge_weights[tup]}")
-  log_debug(seen_subpaths)
+      log.debug("    already SEEN subpath")
+    log.debug(f"  path-edge#{snode_idx}: {tup} {edge_weights[tup]}")
+  log.debug(seen_subpaths)
   
 
 
@@ -1057,10 +990,10 @@ def subgraph_between(graph, start_node, end_node):
 
 subgraph = subgraph_between(graph, 'shiny gold', 'END')
 for p in subgraph.edges:
-  log_debug(p)
-log_info("sub-paths for shiny gold:")
+  log.debug(p)
+log.info("sub-paths for shiny gold:")
 for p in nx.all_simple_paths(subgraph, 'shiny gold', "END"):
-  log_info(p)
+  log.info(p)
 
 
 # In[ ]:
@@ -1069,7 +1002,7 @@ for p in nx.all_simple_paths(subgraph, 'shiny gold', "END"):
 edge_weights = nx.get_edge_attributes(graph, 'weight')
 seen_subpaths = []
 for p in nx.all_simple_paths(graph, 'shiny gold', "END"):
-  log_debug(p)
+  log.debug(p)
   for start_idx in reversed(range(len(p)-2)):
     seen = False
     subpath = tuple(p[0:start_idx+2])
@@ -1079,7 +1012,7 @@ for p in nx.all_simple_paths(graph, 'shiny gold', "END"):
       seen = True
     tup = tuple([p[start_idx], p[start_idx+1]])
     w = edge_weights[tup]
-    log_debug(f"  subedge={tup}, weight={w}; subpath={subpath}, seen={seen}")
+    log.debug(f"  subedge={tup}, weight={w}; subpath={subpath}, seen={seen}")
 
 
 # In[ ]:
@@ -1089,7 +1022,7 @@ for p in nx.all_simple_paths(graph, 'shiny gold', "END"):
 clr = 'shiny gold'
 clr_edges = filter(lambda it: it[0]==clr, list(graph.edges))
 for edge in clr_edges:
-  log_debug(edge, edge_weights[edge])
+  log.debug(f"edge={edge}, edge-weight={edge_weights[edge]}")
 
 
 # In[ ]:
@@ -1116,11 +1049,556 @@ def required_contents(bag_color):
   return sum(q + q * required_contents(color) for color, q in contains[bag_color] )
 
 contains = dict(parse_rule(r) for r in test_str.split("\n"))
-log_debug("test rules (parsed):", contains)
+log.debug("test rules (parsed):", contains)
 print("tests result", required_contents('shiny gold'))
 
 contains = dict(parse_rule(r) for r in rules)
 print("Day 7 b solution", required_contents('shiny gold'))
+
+
+# ### Day 8: Handheld Halting
+
+# In[ ]:
+
+
+def read_prog(l):
+  outlst = aoc.map_list(lambda it: it.split(' '), l)
+  for instr in outlst:
+    instr[1] = int(instr[1])
+  return outlst
+
+
+# In[ ]:
+
+
+def run_cpu_prog(prog):
+  cpuct = 0
+  pptr = 0
+  prog_len = len(prog)
+  seen = []
+  acc = 0
+  while True:
+    cpuct += 1
+    if pptr in seen:
+      log.info(f"found inf-loop @cpuct={cpuct} @instr#={pptr} : {instr}")
+      break
+    elif pptr == prog_len:
+      log.info(f"found prog-term @cpuct={cpuct} @instr#={pptr} : {instr}")
+      break
+    else:
+      seen.append(pptr)
+    instr = prog[pptr]
+    op, par = instr
+    log.debug(f"instr#{cpuct} instr={instr}")
+    if cpuct > 10_000:
+      raise Exception("failsafe")
+    if op == 'nop':
+      pptr += 1
+      #log.debug(f"  new pptr={pptr}")
+    elif op == 'acc':
+      acc += par
+      pptr += 1
+      #log.debug(f"  new acc={acc}")
+    elif op == 'jmp':
+      pptr += par
+      #log.debug(f"  jmp for={par} to={pptr}")
+    else:
+      raise Exception(f"unknown opcode in {instr}")
+  return acc
+
+
+# In[ ]:
+
+
+tests = """
+nop +0
+acc +1
+jmp +4
+acc +3
+jmp -3
+acc -99
+acc +1
+jmp -4
+acc +6
+""".strip().split("\n")
+log.debug(tests)
+test_prog = read_prog(tests)
+log.debug(test_prog)
+
+
+# In[ ]:
+
+
+run_cpu_prog(test_prog)
+
+
+# In[ ]:
+
+
+ins = aoc.read_file_to_str('./in/day08.in').strip().split("\n")
+prog = read_prog(ins)
+print("Day 8 a solution: acc:", run_cpu_prog(prog))
+
+
+# In[ ]:
+
+
+print("Day 8 b")
+
+
+# In[ ]:
+
+
+def check_cpu_prog(prog):
+  prog_len = len(prog)
+  cpuct = 0
+  pptr = 0
+  seen = []
+  acc = 0
+  while True:
+    if pptr == prog_len:
+      log.debug(f"OK: prog terminates! @cpuct={cpuct} @instr#={pptr} : last-instr={instr}")
+      return True
+    cpuct += 1
+    instr = prog[pptr]
+    op, par = instr
+    #log.debug(f"instr#{cpuct} {instr}")
+    if pptr in seen:
+      log.debug(f"Fail: found inf-loop @cpuct={cpuct} @instr#={pptr} : {instr}")
+      return False
+    else:
+      seen.append(pptr)
+    if cpuct > 10_000:
+      raise Exception("failsafe")
+    if op == 'nop':
+      pptr += 1
+      #log.debug(f"  new pptr={pptr}")
+    elif op == 'acc':
+      acc += par
+      pptr += 1
+      #log.debug(f"  new acc={acc}")
+    elif op == 'jmp':
+      pptr += par
+      #log.debug(f"  jmp for={par} to={pptr}")
+    else:
+      raise Exception(f"unknown opcode in {instr}")
+  return acc
+
+
+# In[ ]:
+
+
+print("test result: check-cpu-prog", check_cpu_prog(test_prog))
+
+
+# In[ ]:
+
+
+from copy import deepcopy
+
+def check_prog_variations(prog):
+  base_prog = deepcopy(prog)
+  altinstrs = []
+  for idx, instr in enumerate(base_prog):
+    if instr[0] in ['nop', 'jmp']:
+      altinstrs.append([idx, instr])
+  log.debug(f"alternate instructions: {altinstrs}")
+  
+  if check_cpu_prog(base_prog):
+    #log.debug("prog=", base_prog)
+    acc = run_cpu_prog(base_prog)
+    log.debug(f"prog ok, acc={acc}")
+  for elem in altinstrs:
+    #log.debug("elem:", elem)
+    idx, v = elem
+    instr, par = v
+    prog = deepcopy(base_prog)
+    if instr == 'nop':
+      prog[idx][0] = 'jmp'
+    elif instr == 'jmp':
+      prog[idx][0] = 'nop'
+    #log.debug(f"new-instr @{idx}={prog[idx][0]}")
+    #log.debug("new-prog=", prog)
+    if check_cpu_prog(prog):
+      acc = run_cpu_prog(prog)
+      log.info(f"prog ok, acc={acc}")
+      break    
+  return acc
+
+
+# In[ ]:
+
+
+result = check_prog_variations(test_prog)
+print("test result: check-prog-variations", result)
+
+
+# In[ ]:
+
+
+result = check_prog_variations(read_prog(ins))
+print("Day 8 b result: check-prog-variations", result)
+
+
+# ### Day 9: Encoding Error
+
+# In[ ]:
+
+
+tests = """
+35
+20
+15
+25
+47
+40
+62
+55
+65
+95
+102
+117
+150
+182
+127
+219
+299
+277
+309
+576
+""".strip().split("\n")
+
+
+# In[ ]:
+
+
+from typing import List
+
+def pp_lst(lst):
+  return "[" +  str.join(',', aoc.map_list(str, lst)) + "]"
+
+def check_xmas_data(xmas_data: int, preamble: List[int]) -> bool:
+  preamble_len = len(preamble)
+  #log.debug("[check_xmas_data] xmas_data:", xmas_data, ", preamble_len;:", len(preamble))
+  ok = False
+  for combi in itertools.combinations(preamble, 2): # for entries no combination with itself!
+    if sum(combi) == xmas_data:
+      ok = True
+      #log.info(f"[check_xmas_data] OK: xmas-data-elem {xmas_data} is sum of prev-elems:{combi}")
+      break
+  return ok
+
+def check_xmas_data_seq(xmas_data_seq: List[int], preamble: List[int]) -> bool:
+  #log.debug("[check_xmas_data_seq] xmas_data_seq:", xmas_data_seq, ", preamble_len;:", len(preamble))
+  preamble_len = len(preamble)
+  all_ok = True
+  for xmas_data in xmas_data_seq:
+    #log.info(f"[check_xmas_data_seq] elem={xmas_data} preamble={pp_lst(preamble)}")
+    ok = check_xmas_data(xmas_data, preamble)
+    preamble.pop(0)
+    preamble.append(xmas_data)
+    #log.info(f"  p appended={xmas_data}, removed={remvd}, preamble={str.join(',', lmap(str, preamble))}")
+    all_ok &= ok
+  return all_ok
+
+
+# In[ ]:
+
+
+preamble0 = list(range(1, 25+1)) # numbers 1..25
+log.debug(preamble0)
+
+
+# In[ ]:
+
+
+assert( True == check_xmas_data(26, preamble0) )
+assert( True == check_xmas_data(49, preamble0) )
+assert( False == check_xmas_data(100, preamble0) )
+assert( False == check_xmas_data(50, preamble0) )
+
+
+# In[ ]:
+
+
+preamble1 = flatten_list( [[20], list(range(1, 20)), list(range(21, 26))] )
+log.debug(preamble1)
+
+
+# In[ ]:
+
+
+assert( True == check_xmas_data_seq([45, 26], preamble1) )
+assert( False == check_xmas_data_seq([45, 65], preamble1) )
+assert( True == check_xmas_data_seq([45, 64], preamble1) )
+assert( True == check_xmas_data_seq([45, 66], preamble1) )
+
+
+# In[ ]:
+
+
+def verify_xmas_data_seq(xmas_data_rawseq: List[int], preamble_len=25) -> bool:
+  """List `xmas_data_rawseq` contains the preamble as head."""
+  preamble = xmas_data_rawseq[0:preamble_len]
+  xmas_data_seq = xmas_data_rawseq[preamble_len:]
+  log.debug(f"[verify_xmas_data_seq] xmas_data_seq:{pp_lst(xmas_data_seq)}, preamble:{pp_lst(preamble)}")
+  preamble_len = len(preamble)
+  oks = []
+  for xmas_data in xmas_data_seq:
+    #log.info(f"[check_xmas_data_seq] elem={xmas_data} preamble={str.join(',', lmap(str, preamble))}")
+    ok = check_xmas_data(xmas_data, preamble)
+    oks.append([xmas_data, ok])
+    preamble.pop(0)
+    preamble.append(xmas_data)
+  return oks
+
+
+# In[ ]:
+
+
+raw_testdata = aoc.map_list(int, tests)
+res = verify_xmas_data_seq(raw_testdata, preamble_len=5)
+res = aoc.map_list(lambda it: it[0], aoc.filter_list(lambda it: it[1] == False, res))
+log.info(f"test False results: {res}")
+assert( [127] == res )
+
+
+# In[ ]:
+
+
+ins = aoc.map_list(int, aoc.read_file_to_list('./in/day09.in'))
+log.debug(ins)
+
+
+# In[ ]:
+
+
+res = verify_xmas_data_seq(ins, preamble_len=25)
+res = aoc.map_list(lambda it: it[0], aoc.filter_list(lambda it: it[1] == False, res))
+log.info(f"found invalid number(s): {res}")
+invalid_num = res[0]
+print("Day 8 a solution:", invalid_num)
+
+
+# In[ ]:
+
+
+# see: [python - List all contiguous sub-arrays](https://stackoverflow.com/questions/41576911/list-all-contiguous-sub-arrays)
+def get_all_windows(lst, min_win_len=1):
+  """Generator yielding all sub-windows (contiguous sublists) of given list with min_win_len."""
+  for win_len in range(min_win_len, len(lst)+1):
+    for idx in range(len(lst)-win_len+1):
+      yield lst[idx:idx+win_len]
+
+
+# In[ ]:
+
+
+test_invalidnum = 127
+raw_testdata2 = raw_testdata.copy()
+raw_testdata2.remove(test_invalidnum)
+for subl in get_all_windows(raw_testdata2):
+  if sum(subl) == test_invalidnum:
+    log.info(f"found fulfilling-window: {subl}")
+    break
+
+
+# In[ ]:
+
+
+ins2 = ins.copy()
+ins2.remove(invalid_num)
+for subl in get_all_windows(ins2):
+  if sum(subl) == invalid_num:
+    log.info(f"found fulfilling-window: {subl}")
+    min_elem = min(subl)
+    max_elem = max(subl)
+    solut = min_elem+max_elem
+    log.info(f"min, max, sum: {[min_elem, max_elem, solut]}")
+    break
+
+
+# ### Day 10: Adapter Array
+
+# In[ ]:
+
+
+#log.setLevel( aoc.LOGLEVEL_TRACE )
+log.debug(f"effective-log-level={log.getEffectiveLevel()}")
+
+
+# In[ ]:
+
+
+def solve10a(loi):
+  current = 0
+  remainders = loi.copy()
+  chain = [current]
+  jolts = []
+  for i in range(len(remainders)):
+    targets = filterl(lambda it: it >= current and it <= current + 3, remainders)
+    target = min(targets)
+    remainders.remove(target)
+    #log.debug(f"#{i} from={current} targets={targets}, target={target}, djolt={target-current}, remainders={remainders}")
+    chain.append(target)
+    jolts.append(target-current)
+    current = target
+    if len(remainders) == 0:
+      jolts.append(3) # final device 3 jolts higher than lasta dapter in chain
+      j1 = jolts.count(1)
+      j3 = jolts.count(3)
+      res = j1*j3
+      log.info(f"chain {aoc.cl(chain)} terminated ok, jolts={aoc.cl(jolts)}, j1#={j1}, j3#={j3}, res={res}")
+      return j1*j3
+  raise Exception("solution not found")
+
+
+# In[ ]:
+
+
+tests = """
+16
+10
+15
+5
+1
+11
+7
+19
+6
+12
+4
+""".strip().split("\n")
+tests1 = aoc.map_list(int, tests)
+
+log.debug(f"test1={tests1}")
+res = solve10a(tests1)
+aoc.assert_msg("test 1", 7*5 == res)
+log.info(f"tests1 solution: {res}")
+
+tests = """
+28
+33
+18
+42
+31
+14
+46
+20
+48
+47
+24
+23
+49
+45
+19
+38
+39
+11
+1
+32
+25
+35
+8
+17
+7
+9
+4
+2
+34
+10
+3
+""".strip().split("\n")
+log.setLevel( logging.INFO )
+tests2 = mapl(int, tests)
+res = solve10a(tests2)
+aoc.assert_msg("test 2", 220 == res)
+log.info(f"tests2 solution: {res}")
+
+
+# In[ ]:
+
+
+ins = mapl(int, aoc.read_file_to_list('./in/day10.in'))
+res = solve10a(ins)
+log.info(f"Day 10 a solution: {res}")
+
+
+# In[ ]:
+
+
+import time
+def find_paths(loi): # loi is a list of ints (input)
+  start_tm = int(time.time())
+  end_elem = max(loi)
+  partials = {0: [[0]]}
+  found_num = 0
+  current = 0
+  iter = 0
+  lastlevel_partials = 0 # just only for printing (debugging)
+  last_partials = [[0, 1]]
+  elems_avail = loi.copy()
+  for lvl in range(1, len(loi)+1):
+    last_partials_keys = mapl(lambda it: it[0], last_partials)
+    min_last_elem = min(last_partials_keys)
+    elems_avail = filterl(lambda it: it > min_last_elem, elems_avail)
+    filtered_elems = {}
+    last_partials_count = {}
+    
+    for src in sorted(set(last_partials_keys)):
+      filtered_elems[src] = filterl(lambda it: it > src and it <= src + 3, elems_avail)
+      last_partials_count[src] = sum(mapl(lambda it: it[1], filterl(lambda it: it[0]==src, last_partials)))
+
+    partials_diff = len(last_partials_keys)-lastlevel_partials
+    needed_tm = int(time.time()) - start_tm
+    log.debug(f"level={lvl} @{needed_tm}s, found={found_num}, paths-diff={partials_diff:,} before-partials-#={len(last_partials):,}, min-last-elem={min_last_elem}, elems_avail#={len(elems_avail)}")
+    log.debug(f"  last-partials-ct={last_partials_count}")
+    #log.debug(f"  last-partials={last_partials}")
+    lastlevel_partials = len(last_partials)
+    partials = []
+    for partial in sorted(set(last_partials_keys)): #last_partials:
+      iter += 1
+      if iter % 100_000_000 == 0:
+        log.debug(f"at iter#={iter:,}, found#={found_num}, level={lvl}")
+      #if iter > 10_000_000_000: # FAILSAFE
+      #  return found
+      targets = filtered_elems[partial]
+      for target in targets:
+        if target == end_elem:
+          if found_num % 100_000 == 0:
+            log.debug(f"at found# {found_num}")
+          found_num += last_partials_count[partial]
+        else:
+          partials.append( [target, last_partials_count[partial]] )
+      last_partials = partials
+  log.info(f"level={lvl} @{needed_tm}s, found={found_num}, paths-diff={partials_diff:,} before-partials-#={len(last_partials):,}, min-last-elem={min_last_elem}, elems_avail#={len(elems_avail)}")
+  return found_num
+
+
+# In[ ]:
+
+
+#log.setLevel( aoc.LOGLEVEL_TRACE )
+log.debug(f"effective-log-level={log.getEffectiveLevel()}")
+found = find_paths(tests1)
+log.info(f"tests1 found {found} from {tests1}")
+assert( 8 == found )
+#found == 8
+
+
+# In[ ]:
+
+
+found = find_paths(tests2)
+log.info(f"test2 found {found} paths") # 19208
+assert( 19208 == found )
+
+
+# In[ ]:
+
+
+found = find_paths(ins)
+log.info(f"Day 10 b solution: found {found} paths")
 
 
 # In[ ]:
