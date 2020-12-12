@@ -1423,13 +1423,6 @@ for subl in get_all_windows(ins2):
 # In[ ]:
 
 
-#log.setLevel( aoc.LOGLEVEL_TRACE )
-log.debug(f"effective-log-level={log.getEffectiveLevel()}")
-
-
-# In[ ]:
-
-
 def solve10a(loi):
   current = 0
   remainders = loi.copy()
@@ -1553,7 +1546,6 @@ def find_paths(loi): # loi is a list of ints (input)
     needed_tm = int(time.time()) - start_tm
     log.debug(f"level={lvl} @{needed_tm}s, found={found_num}, paths-diff={partials_diff:,} before-partials-#={len(last_partials):,}, min-last-elem={min_last_elem}, elems_avail#={len(elems_avail)}")
     log.debug(f"  last-partials-ct={last_partials_count}")
-    #log.debug(f"  last-partials={last_partials}")
     lastlevel_partials = len(last_partials)
     partials = []
     for partial in sorted(set(last_partials_keys)): #last_partials:
@@ -1599,6 +1591,410 @@ assert( 19208 == found )
 
 found = find_paths(ins)
 log.info(f"Day 10 b solution: found {found} paths")
+
+
+# ### Day 11: Seating System
+
+# In[ ]:
+
+
+#log.setLevel( aoc.LOGLEVEL_TRACE )
+log.debug(f"effective-log-level={log.getEffectiveLevel()}")
+
+
+# In[ ]:
+
+
+import copy # for deepcopy
+import hashlib
+
+class CellularWorld:
+  def __init__(self, world, store_hashes=False):
+    """World object constructor, world has to be given as a list-of-lists of chars."""
+    self.world = world
+    self.dim = [len(world[0]), len(world)]
+    self.iter_num = 0
+    log.info(f'[CellularWorld] new dim={self.dim}')
+    self.world = world
+    self.store_hashes = store_hashes
+    if self.store_hashes:
+      self.world_hashes = [self.get_hash()]
+  
+  def repr(self):
+    """Return representation str (can be used for printing)."""
+    return str.join("\n", map(lambda it: str.join('', it), self.world))
+  
+  def set_world(self, world):
+    self.world = world
+    self.dim = [len(world[0]), len(world)]
+
+  def get_hash(self):
+    return hashlib.sha1(self.repr().encode()).hexdigest()
+
+  def get_neighbors8(self, x, y):
+    """Get cell's surrounding 8 neighbors, omitting boundaries."""
+    log.trace(f"[CellularWorld]:get_neighbors8({x},{y})")
+    dim_x = self.dim[0]
+    dim_y = self.dim[1]
+    neighbors = ''
+    for nx in range(x-1, x+2):
+      for ny in range(y-1, y+2):
+        if (nx >= 0 and nx < dim_x) and (ny >= 0 and ny < dim_y) and not (nx == x and ny == y):
+          #log.info(f"  neighb={[nx, ny]}")
+          neighbors += self.world[ny][nx]
+    return neighbors
+  
+  def iterate(self, steps=1):
+    for i in range(steps):
+      world2 = copy.deepcopy(self.world)
+      for y in range(self.dim[1]):
+        for x in range(self.dim[0]):
+          val = self.world[y][x]
+          neighbors = self.get_neighbors8(x, y)
+          #log.trace(f"[{x},{y}]='{val}' nbs='{neighbors}'")
+          if val == 'L' and neighbors.count('#') == 0:
+            world2[y][x] = '#'
+          elif val == '#' and neighbors.count('#') >= 4:
+            world2[y][x] = 'L'
+      self.iter_num += 1
+      self.set_world(world2)
+      if self.store_hashes:
+        self.world_hashes.append(self.get_hash())
+
+  def find_cycle(self, max_iter=1_000):
+    """This may only be called at initial state, before any previous iterations."""
+    seen = [world.repr]
+    for i in range(max_iter):
+      if i % 1_000 == 0:
+        log.debug(f"iter# {i}, still running")
+      world.iterate()
+      world_repr = world.repr()
+      if world_repr in seen:
+        start_idx = seen.index(world_repr)
+        log.info(f"found cycle @ iter={i+1}, seen-idx={start_idx}")
+        return([start_idx, i+1])
+      else:
+        seen.append(world_repr)
+    raise Exception("no world iter cycle found")
+
+  def find_stable(self, max_iter=1_000):
+    last_hash = self.get_hash()
+    #log.info(f"cworld initial state: (hash={last_hash}).")
+    #log.debug("world-repr=\n{cworld.repr()}")
+    for i in range(1, max_iter+1):
+      self.iterate()
+      this_hash = self.get_hash()
+      #log.debug(f"cworld state after iter#{i}, hash={this_hash}") #":\n{self.repr()}")
+      if this_hash == last_hash:
+        log.info(f"[CellularWorld:find_stable] BREAK on stable beginning @{i-1}")
+        return True
+      else:
+        last_hash = this_hash
+    raise Exception(f"[CellularWorld:find_stable] NO stable world iter found, after break on {max_iter} steps")
+
+
+# In[ ]:
+
+
+tests = """
+L.LL.LL.LL
+LLLLLLL.LL
+L.L.L..L..
+LLLL.LL.LL
+L.LL.LL.LL
+L.LLLLL.LL
+..L.L.....
+LLLLLLLLLL
+L.LLLLLL.L
+L.LLLLL.LL
+""".strip().split("\n")
+
+tests = mapl(list, tests)
+cworld = CellularWorld(tests) #, store_hashes=True)
+cworld.find_stable()
+seats_occ = cworld.repr().count('#')
+log.info(f"test stable occupied-seats={seats_occ}")
+  
+
+
+# In[ ]:
+
+
+ins = aoc.read_file_to_list('./in/day11.in')
+ins = mapl(list, ins)
+cworld = CellularWorld(ins)
+cworld.find_stable()
+seats_occ = cworld.repr().count('#')
+log.info(f"Day 11 a solution: stable occupied-seats={seats_occ} after {cworld.iter_num} iterations")
+
+
+# In[ ]:
+
+
+print("Day 11 b")
+
+class CellularWorldDirected(CellularWorld):
+  def iterate(self, steps=1):
+    for i in range(steps):
+      world2 = copy.deepcopy(self.world)
+      for y in range(self.dim[1]):
+        for x in range(self.dim[0]):
+          val = self.world[y][x]
+          neighbors = self.get_seen_occuppied_seats(x, y)
+          if val == 'L' and neighbors == 0:
+            world2[y][x] = '#'
+          elif val == '#' and neighbors >= 5:
+            world2[y][x] = 'L'
+      self.iter_num += 1
+      self.set_world(world2)
+      if self.store_hashes:
+        self.world_hashes.append(self.get_hash())
+
+  def get_seen_occuppied_seats(self, x, y):
+    directions = [
+      [1,0], [-1,0], [0,1], [0,-1],
+      [1,1], [-1,1], [1,-1], [-1,-1],
+    ]
+    seen = 0
+    for d in directions:
+      #dseen = 0
+      dx, dy = d  # directions
+      nx, ny = [x, y] # startpoint
+      while(True):  # loop handling one direction vector
+        nx, ny = [nx+dx, ny+dy]
+        if nx < 0 or ny < 0 or nx >= self.dim[0] or ny >= self.dim[1]:
+          break
+        if "#" == self.world[ny][nx]:
+          #dseen += 1
+          seen += 1
+          break  # in each direction, only 1 occupied can bee seen
+        elif "L" == self.world[ny][nx]:
+          break  # empty seats block view
+    return seen
+
+  def find_cell(self, val):
+    """Find first cell containing given value, return it's `[x, y]` coordinates."""
+    for y in range(self.dim[1]):
+      for x in range(self.dim[0]):
+        if self.world[y][x] == val:
+          return [x, y]
+
+
+# In[ ]:
+
+
+tests = """
+.......#.
+...#.....
+.#.......
+.........
+..#L....#
+....#....
+.........
+#........
+...#.....
+""".strip().split("\n")
+
+tests = mapl(list, tests)
+cworld = CellularWorldDirected(tests)
+log.info(f"world repr:\n{cworld.repr()}")
+c = cworld.find_cell('L')
+n = cworld.get_seen_occuppied_seats(c[0], c[1])
+log.info(f"  empty spectator cell={c}, neib-#={n}")
+assert( 8 == n )
+
+
+# In[ ]:
+
+
+tests = """
+.............
+.L.L.#.#.#.#.
+.............
+""".strip().split("\n")
+tests = mapl(list, tests)
+cworld = CellularWorldDirected(tests)
+c = cworld.find_cell('L')
+assert( 0 == cworld.get_seen_occuppied_seats(c[0], c[1]) )
+
+
+# In[ ]:
+
+
+tests = """
+.##.##.
+#.#.#.#
+##...##
+...L...
+##...##
+#.#.#.#
+.##.##.
+""".strip().split("\n")
+tests = mapl(list, tests)
+cworld = CellularWorldDirected(tests)
+c = cworld.find_cell('L')
+assert( 0 == cworld.get_seen_occuppied_seats(c[0], c[1]) )
+
+
+# In[ ]:
+
+
+tests = """
+L.LL.LL.LL
+LLLLLLL.LL
+L.L.L..L..
+LLLL.LL.LL
+L.LL.LL.LL
+L.LLLLL.LL
+..L.L.....
+LLLLLLLLLL
+L.LLLLLL.L
+L.LLLLL.LL
+""".strip().split("\n")
+tests = mapl(list, tests)
+cworld = CellularWorldDirected(tests)
+
+#for i in range(12):
+#  log.info(f"before: 0,0 val={cworld.world[0][0]} seen-occupied-#={cworld.get_seen_occuppied_seats(0,0)}")
+#  cworld.iterate()
+#  log.info(f"after {cworld.iter_num} iters, hash={cworld.get_hash()}: repr:\n{cworld.repr()}")
+cworld.find_stable()
+log.info(f"world stable after {cworld.iter_num} iters.") #": repr:\n{cworld.repr()}")
+seats_occ = cworld.repr().count('#')
+assert(26 == seats_occ)
+log.info(f"test stable occupied-seats={seats_occ}")
+
+
+# In[ ]:
+
+
+cworld = CellularWorldDirected(ins)
+cworld.find_stable()
+log.info(f"world stable after {cworld.iter_num} iters.") #": repr:\n{cworld.repr()}")
+seats_occ = cworld.repr().count('#')
+log.info(f"Day 11 b solution: stable occupied-seats={seats_occ} after {cworld.iter_num} iters")
+
+
+# ### Day 12: Rain Risks
+
+# In[ ]:
+
+
+directions = ['N', 'W', 'S', 'E']
+direct_vecs = {'N': [0, 1], 'W': [-1, 0], 'S': [0, -1], 'E': [1, 0]}
+
+def dist_manhattan(pos, pos_ref):
+  return abs(pos[0]-pos_ref[0]) + abs(pos[1]-pos_ref[1])
+
+def move_ship(los):
+  ship_direct = 'E'
+  ship_vec = direct_vecs[ship_direct]
+  pos_ref = [0, 0]
+  pos = pos_ref.copy()
+  for cmd_str in los:
+    cmd, val = [cmd_str[0], int(cmd_str[1:])]
+    log.debug(f"cmd={[cmd, val]}")
+    if cmd in directions:
+      vec = direct_vecs[cmd]
+      pos[0] += val * vec[0]
+      pos[1] += val * vec[1]
+      log.debug(f"  new pos: {pos}")
+    elif cmd == 'F':
+      pos[0] += val * ship_vec[0]
+      pos[1] += val * ship_vec[1]
+      log.debug(f"  new pos: {pos}; ship_direct={ship_direct}")
+    elif cmd == 'R' or cmd == 'L':
+      turns = val//90
+      if cmd == 'R':
+        new_direct_idx = directions.index(ship_direct)-turns
+      elif cmd == 'L':
+        new_direct_idx = (directions.index(ship_direct)+turns) % len(directions)
+      log.debug(f"cur_direct={ship_direct}:{directions.index(ship_direct)}, new_direct_idx={new_direct_idx}; cmd={cmd_str}; turns={turns}")
+      ship_direct = directions[new_direct_idx]
+      ship_vec = direct_vecs[ship_direct]
+      log.debug(f"  new ship_direct: {ship_direct}; from turn:{cmd}")
+  return dist_manhattan(pos, pos_ref)
+      
+
+
+# In[ ]:
+
+
+tests = """
+F10
+N3
+F7
+R90
+F11
+""".strip().split("\n")
+
+assert( 25 == move_ship(tests) )
+
+
+# In[ ]:
+
+
+ins = aoc.read_file_to_list('./in/day12.in')
+res = move_ship(ins)
+log.info(f"Day 12 a solution: {res}")
+
+
+# In[ ]:
+
+
+print("Day 12 b")
+
+def move_ship_by_waypoint(los):
+  pos_ref = [0, 0]
+  waypt_pos = [10, 1]
+  pos = pos_ref.copy()
+  for cmd_str in los:
+    cmd, val = [cmd_str[0], int(cmd_str[1:])]
+    log.debug(f"cmd={[cmd, val]}")
+    if cmd in directions:
+      vec = direct_vecs[cmd]
+      dpos = [val * vec[0], val * vec[1]]
+      waypt_pos[0] += dpos[0]
+      waypt_pos[1] += dpos[1]
+      log.debug(f"  new waypt-rpos: {waypt_pos}")
+    elif cmd == 'F':
+      dpos = [val * waypt_pos[0], val * waypt_pos[1]]
+      pos[0] += dpos[0]
+      pos[1] += dpos[1]
+      log.debug(f"  new pos: {pos}; waypt-rpos={waypt_pos}")
+    elif cmd == 'R' or cmd == 'L': # rotate cartesian coordinates around origin in 90 degrees steps
+      if cmd_str in ['R90', 'L270']: # rotate RIGHT
+        cx, cy = waypt_pos
+        waypt_pos = [cy, -cx]
+      elif cmd_str in ['L90', 'R270']: # rotate LEFT
+        cx, cy = waypt_pos
+        waypt_pos = [-cy, cx]
+      elif cmd_str in ['L180', 'R180']: # invert 180
+        cx, cy = waypt_pos
+        waypt_pos = [-cx, -cy]
+      elif cmd_str in ['L180', 'R180']:
+        cx, cy = waypt_pos
+        waypt_pos = [-cx, -cy]
+      else:
+        raise Exception(f"unknown cmd_str={cmd_str}")
+      log.debug(f"  new waypt-rpos={waypt_pos} from {[cx, cy]}")
+  dist = dist_manhattan(pos, pos_ref)
+  log.info(f"dist={dist}")
+  return dist
+
+
+# In[ ]:
+
+
+assert( 286 == move_ship_by_waypoint(tests) )
+
+
+# In[ ]:
+
+
+log.setLevel( logging.INFO )
+res = move_ship_by_waypoint(ins)
+log.info(f"Day 12 b solution: {res}")
 
 
 # In[ ]:
