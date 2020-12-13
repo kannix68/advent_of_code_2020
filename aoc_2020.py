@@ -24,6 +24,8 @@ print("Version info:", sys.version_info)
 log = aoc.getLogger(__name__)
 print(f"initial log-level={log.getEffectiveLevel()}")
 
+EXEC_RESOURCE_HOGS = False
+
 
 # ## Problem domain code
 
@@ -1995,6 +1997,243 @@ assert( 286 == move_ship_by_waypoint(tests) )
 log.setLevel( logging.INFO )
 res = move_ship_by_waypoint(ins)
 log.info(f"Day 12 b solution: {res}")
+
+
+# ### Day 13: Shuttle search
+
+# In[ ]:
+
+
+tests = """
+939
+7,13,x,x,59,x,31,19
+""".strip().split("\n")
+
+
+# In[ ]:
+
+
+def find_shuttle(los):
+  min_wait_tm, min_bus = [99_999_999, -1]
+
+  start_tm = int(los[0])
+  shuttles = los[1].split(',')
+  log.info(f"[find_shuttle] {start_tm} {shuttles}")
+  for bus in shuttles:
+    if bus == 'x':
+      continue
+    bus = int(bus)
+    remainder = start_tm % bus
+    if remainder == 0:
+      wait_tm = 0
+    else:
+      wait_tm = bus - remainder
+    if wait_tm < min_wait_tm:
+      min_wait_tm, min_bus = [wait_tm, bus]
+      log.info(f"new_min: wait_tm={wait_tm}, 4bus={bus}, rmd={remainder}, res={wait_tm * bus}")
+    if wait_tm == 0:
+      break
+    log.debug(f"wait_tm={wait_tm}, 4bus={bus}, rmd={remainder}, res={wait_tm * bus}")
+  res = min_wait_tm * min_bus
+  log.info(f"MIN: wait_tm={min_wait_tm}, 4bus={min_bus}, res={res}")
+  return res
+
+
+# In[ ]:
+
+
+find_shuttle(tests)
+
+
+# In[ ]:
+
+
+ins = aoc.read_file_to_list('./in/day13.in')
+find_shuttle(ins)
+
+
+# In[ ]:
+
+
+print("Day 13 b")
+
+def find_shuttle_offsetted(s):
+  """Semi-optimized brute-force algorithm implementation."""
+  start_tm = int(time.time())
+  log.info(f"[find_shuttle_offsetted] {s}")
+  offsets = {}
+  values = {}
+  for idx, val in enumerate(s.split(',')):
+    if val == 'x':
+      continue
+    val = int(val)
+    values[idx] =val  # by offset
+    offsets[val] = idx  # by value
+  srtvalues = list(reversed(sorted(list(values.values()))))
+  max_iterator = max(srtvalues)
+  max_iterator_offset = offsets[max_iterator]
+  log.info(f"max_it={max_iterator}->ofst={max_iterator_offset}; srtvalues={srtvalues}, offsets={offsets}, values={values}")
+  
+  #values_len = len(srtvalues)
+  iterator2 = srtvalues[1]
+  iterator2_offset = offsets[iterator2]
+  iterator3 = srtvalues[2]
+  iterator3_offset = offsets[iterator3]
+  print_mod_interval = 100_000_000_000
+  next_print_mod = print_mod_interval
+  #for idx in range(1, 9_000_000_000_000_000//max_iterator): # 10_000, 999_999_999 ):
+  for t in map(lambda it: it * max_iterator -max_iterator_offset, range(1, 9_000_000_000_000_000//max_iterator)):
+    #if idx > 10:
+    #  raise Exception("HACK failsafe")
+    #t = idx * max_iterator - max_iterator_offset
+    if (t + iterator2_offset) % iterator2 != 0        or (t + iterator3_offset) % iterator3 != 0:
+      continue # "FAST EXIT" this loop-item
+    if t >= next_print_mod: #idx >= next_print_mod:
+      log.info(f"  calculating @{int(time.time())-start_tm:,}s ...: t#={t:,}")
+      next_print_mod += print_mod_interval      
+    loop_ok = True
+    for val in srtvalues[3:]:
+      if (t + offsets[val]) % val != 0:
+        #log.info(f"calc t={t}, val={val}, ofst={offsets[val]}, res={(t - offsets[val]) % val}")
+        loop_ok = False
+        break
+      #log.info(f"part-ok for t#{idx}={t} val={val}, ofst={offsets[val]}")
+    if loop_ok:
+      log.info(f"loop-OK for t#={t:,} @{int(time.time())-start_tm:,}s")
+      return t
+  raise Exception(f"No matching shuttle found after step t={t}")
+
+
+# In[ ]:
+
+
+test = "7,13,x,x,59,x,31,19"
+assert( 1068781 == find_shuttle_offsetted(test) )
+
+
+# In[ ]:
+
+
+test = "17,x,13,19"
+assert( 3417 == find_shuttle_offsetted(test) )
+
+
+# In[ ]:
+
+
+test = "67,7,59,61"
+assert( 754018 == find_shuttle_offsetted(test) )
+
+
+# In[ ]:
+
+
+test = "67,x,7,59,61"
+assert( 779210 == find_shuttle_offsetted(test) )
+
+
+# In[ ]:
+
+
+test = "67,7,x,59,61"
+assert( 1261476 == find_shuttle_offsetted(test) )
+
+
+# In[ ]:
+
+
+test = "1789,37,47,1889"
+assert( 1202161486 == find_shuttle_offsetted(test) )
+
+
+# In[ ]:
+
+
+print(f"known: solution larger than {100000000000000:,} <= 100000000000000")
+
+
+# In[ ]:
+
+
+in13b = ins[1]
+#EXEC_RESOURCE_HOGS = True
+if EXEC_RESOURCE_HOGS:
+  res = find_shuttle_offsetted(in13b)
+  print(f"Day 13 b solution={res}")
+else:
+  print("Omitting day 13 b resource expensive solution")
+
+
+# In[ ]:
+
+
+# Inspiration base: [- 2020 Day 13 Solutions - : adventofcode](https://www.reddit.com/r/adventofcode/comments/kc4njx/2020_day_13_solutions/)
+# One solution: [adventofcode2020/main.py at master · r0f1/adventofcode2020](https://github.com/r0f1/adventofcode2020/blob/master/day13/main.py)
+# Math Explanation: [Chinese Remainder Theorem | Brilliant Math & Science Wiki](https://brilliant.org/wiki/chinese-remainder-theorem/)
+# a wonderful walk-through: [aoc/README.md at master · mebeim/aoc](https://github.com/mebeim/aoc/blob/master/2020/README.md#day-13---shuttle-search)
+
+import numpy as np
+#from math import prod # python 3.8 ?
+
+def egcd(a, b):
+  if a == 0:
+    return (b, 0, 1)
+  else:
+    g, y, x = egcd(b % a, a)
+    return (g, x - (b // a) * y, y)
+
+#def egcd(a, b):
+#  if a == 0:
+#    return (b, 0, 1)
+#  else:
+#    g, y, x = egcd(b % a, a)
+#    return (g, x - (b // a) * y, y)
+
+#def modinv(a, m):
+#  g, x, y = egcd(a, m)
+#  if g != 1:
+#    raise Exception('modular inverse does not exist')
+#  else:
+#    return x % m
+
+def modinv(x, m):
+  g, inv, y = egcd(x, m)
+  assert g == 1, 'modular inverse does not exist'
+  return inv % m
+
+def pow38(g,w,p):
+  #log.info(f"pow38({g},{w},{p}) called")
+  if w >= 0:
+    return pow(g, w ,p)
+  else:
+    return modinv(g, p) #, -w, p
+
+
+with open('./in/day13.in') as f:
+  lines = [x.strip() for x in f]
+
+arrival = int(lines[0])
+buses = [(i, int(e)) for i, e in enumerate(lines[1].split(",")) if e.isdigit()]
+
+times = [t for _, t in buses]
+b = [e - (arrival % e) for e in times]
+res = np.min(b) * times[np.argmin(b)]
+print("Day 13 a solution:", res)
+
+# Python-3.7 ERROR: pow() 2nd argument cannot be negative when 3rd argument specified
+def crt(ns, bs):
+  """Solve: Chinese Remainder "problem" using Chinese Remainder Theorem."""
+  # Chinese Remainder Theorem
+  # https://brilliant.org/wiki/chinese-remainder-theorem/
+  #N = prod(ns)
+  N = np.prod(ns).item()
+  #x = sum(b * (N // n) * pow(N // n, -1, n) for b, n in zip(bs, ns))
+  x = sum(b * (N // n) * pow38(N // n, -1, n) for b, n in zip(bs, ns))
+  return x % N
+
+offsets = [time-idx for idx, time in buses]
+res = crt(times, offsets)
+print(f"Day 13 b solution: {res:,} <-- {res}")
 
 
 # In[ ]:
