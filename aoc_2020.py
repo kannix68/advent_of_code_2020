@@ -25,6 +25,7 @@ log = aoc.getLogger(__name__)
 print(f"initial log-level={log.getEffectiveLevel()}")
 
 EXEC_RESOURCE_HOGS = False
+EXEC_EXTRAS = False
 
 
 # ## Problem domain code
@@ -2081,23 +2082,17 @@ def find_shuttle_offsetted(s):
   iterator3_offset = offsets[iterator3]
   print_mod_interval = 100_000_000_000
   next_print_mod = print_mod_interval
-  #for idx in range(1, 9_000_000_000_000_000//max_iterator): # 10_000, 999_999_999 ):
   for t in map(lambda it: it * max_iterator -max_iterator_offset, range(1, 9_000_000_000_000_000//max_iterator)):
-    #if idx > 10:
-    #  raise Exception("HACK failsafe")
-    #t = idx * max_iterator - max_iterator_offset
     if (t + iterator2_offset) % iterator2 != 0        or (t + iterator3_offset) % iterator3 != 0:
       continue # "FAST EXIT" this loop-item
     if t >= next_print_mod: #idx >= next_print_mod:
       log.info(f"  calculating @{int(time.time())-start_tm:,}s ...: t#={t:,}")
-      next_print_mod += print_mod_interval      
+      next_print_mod += print_mod_interval
     loop_ok = True
     for val in srtvalues[3:]:
       if (t + offsets[val]) % val != 0:
-        #log.info(f"calc t={t}, val={val}, ofst={offsets[val]}, res={(t - offsets[val]) % val}")
         loop_ok = False
         break
-      #log.info(f"part-ok for t#{idx}={t} val={val}, ofst={offsets[val]}")
     if loop_ok:
       log.info(f"loop-OK for t#={t:,} @{int(time.time())-start_tm:,}s")
       return t
@@ -2155,11 +2150,74 @@ print(f"known: solution larger than {100000000000000:,} <= 100000000000000")
 # In[ ]:
 
 
+def find_shuttle_offsetted6(s):
+  """Semi-optimized brute-force algorithm implementation."""
+  start_tm = int(time.time())
+  log.info(f"[find_shuttle_offsetted] {s}")
+  offsets = {}
+  values = {}
+  for idx, val in enumerate(s.split(',')):
+    if val == 'x':
+      continue
+    val = int(val)
+    values[idx] = val  # by offset
+    offsets[val] = idx  # by value
+  srtvalues = list(reversed(sorted(list(values.values()))))
+  iterator1 = max(srtvalues)
+  iterator1_offset = offsets[iterator1]
+  log.info(f"max_it={iterator1}->ofst={iterator1_offset}; srtvalues={srtvalues}, offsets={offsets}, values={values}")
+  
+  #values_len = len(srtvalues)
+  iterator2 = srtvalues[1]
+  iterator2_offset = offsets[iterator2]
+  iterator3 = srtvalues[2]
+  iterator3_offset = offsets[iterator3]
+  iterator4 = srtvalues[3]
+  iterator4_offset = offsets[iterator4]
+  iterator5 = srtvalues[4]
+  iterator5_offset = offsets[iterator5]
+  iterator6 = srtvalues[5]
+  iterator6_offset = offsets[iterator6]
+  print_mod_interval = 100_000_000_000
+  next_print_mod = print_mod_interval
+  for idx in range(1, 9_000_000_000_000_000//iterator1):
+    t = idx * iterator1 - iterator1_offset
+
+    if (t + iterator2_offset) % iterator2 != 0:
+      continue # "FAST EXIT" this loop-item
+    elif (t + iterator3_offset) % iterator3 != 0:
+      continue # "FAST EXIT" this loop-item
+    elif (t + iterator4_offset) % iterator4 != 0:
+      continue # "FAST EXIT" this loop-item
+    elif (t + iterator5_offset) % iterator5 != 0:
+      continue # "FAST EXIT" this loop-item
+    elif (t + iterator6_offset) % iterator6 != 0:
+      continue # "FAST EXIT" this loop-item
+    else:
+      if t >= next_print_mod: #idx >= next_print_mod:
+        log.info(f"  calculating @{int(time.time())-start_tm:,}s ...: t#={t:,}; {t//(int(time.time())-start_tm):,} Ts/s")
+        next_print_mod += print_mod_interval
+      loop_ok = True
+      for val in srtvalues[6:]:
+        if (t + offsets[val]) % val != 0:
+          loop_ok = False
+          break
+      if loop_ok:
+        log.info(f"loop-OK for t#={t:,} @{int(time.time())-start_tm:,}s")
+        return t
+  raise Exception(f"No matching shuttle found after step t={t}")
+
+
+# In[ ]:
+
+
 in13b = ins[1]
 #EXEC_RESOURCE_HOGS = True
 if EXEC_RESOURCE_HOGS:
-  res = find_shuttle_offsetted(in13b)
+  res = find_shuttle_offsetted6(in13b)
   print(f"Day 13 b solution={res}")
+  # 2,448,348,017 Ts/s
+  # 3,163,888,049 Ts/s explicit t calc
 else:
   print("Omitting day 13 b resource expensive solution")
 
@@ -2234,6 +2292,305 @@ def crt(ns, bs):
 offsets = [time-idx for idx, time in buses]
 res = crt(times, offsets)
 print(f"Day 13 b solution: {res:,} <-- {res}")
+
+
+# In[ ]:
+
+
+# cool solution from user Rtchaik; this is my preferred!:
+#  at: [- 2020 Day 13 Solutions - : adventofcode](https://www.reddit.com/r/adventofcode/comments/kc4njx/2020_day_13_solutions/)
+
+from itertools import count
+
+def solve_day13_part2(buses):
+  log.info(f"[solve_day13_part2] {buses}")
+  start_idx, steps = 0, 1
+  log.info(f"  initial startid={start_idx}, steps-delta={steps}")
+  for bus, offset in sorted(buses.items(), reverse=True):
+    for tstamp in count(start_idx, steps):
+      if not (tstamp + offset) % bus:
+        start_idx = tstamp
+        steps *= bus
+        log.info(f"  new startid={start_idx}, steps-delta={steps}, tstamp={tstamp}")
+        break
+  log.info(f"found-OK: {tstamp}")
+  return tstamp
+
+def prepare_buses(s):
+  buses = {}
+  for idx, val in enumerate(s.split(',')):
+    if val == 'x':
+      continue
+    val = int(val)
+    buses[val] = idx
+  return buses
+
+
+# In[ ]:
+
+
+test = "1789,37,47,1889"
+assert( 1202161486 == solve_day13_part2(prepare_buses(test)) )
+
+
+# In[ ]:
+
+
+#ins = aoc.read_file_to_list('./in/day13.in')
+res = solve_day13_part2(prepare_buses(ins[1]))
+log.info(f"Day 13 b solution: {res:,} <-- {res}")
+
+
+# ### Day 14: Docking Data
+
+# In[ ]:
+
+
+def solve_day14_a(los):
+  log.info(f"[solve_day14_a] #-instructions={len(los)}")
+  addrs = {}
+  for line in los:
+    if line.startswith('mask'):
+      mask = line.split(' ')[-1]
+      mask_or = mask.replace('0','X').replace('X','0')
+      mask_and = mask.replace('1','X').replace('X','1')
+      num_or = int(mask_or, 2)
+      num_and = int(mask_and, 2)
+      log.debug(f"mask={mask}")
+      log.trace(f"  mask_or ={mask_or }; num_or ={num_or}")
+      log.trace(f"  mask_and={mask_and}; num_and={num_and}")
+    else:
+      addr, val = mapl(int, filterl(lambda it: it != '', re.split(r'[^\d]', line)))
+      new_val = (val | num_or) & num_and
+      addrs[addr] = new_val
+      log.debug(f"instruct={[addr, val]} new_val={new_val}")
+  res = sum(addrs.values())
+  log.info(f"[solve_day14_a] value-sum={res} from num-addrs={len(addrs.keys())} addrs[#1-#3]={list(addrs.items())[0:3]}")
+  return res
+
+
+# In[ ]:
+
+
+tests = """
+mask = XXXXXXXXXXXXXXXXXXXXXXXXXXXXX1XXXX0X
+mem[8] = 11
+mem[7] = 101
+mem[8] = 0
+""".strip().split("\n")
+
+#log.setLevel(logging.DEBUG)
+solve_day14_a(tests)
+
+
+# In[ ]:
+
+
+log.setLevel(logging.INFO)
+ins = aoc.read_file_to_list('./in/day14.in')
+solve_day14_a(ins)
+
+
+# In[ ]:
+
+
+print("Day 14 b")
+
+
+# In[ ]:
+
+
+import itertools
+# this function by reddit User semicolonator
+#  @ [adventofcode2020/main.py at master · r0f1/adventofcode2020](https://github.com/r0f1/adventofcode2020/blob/master/day14/main.py)
+def get_possible_addrs(mask, addr):
+  mask2 = "".join(v if m == "0" else m for m, v in zip(mask, f"{addr:036b}"))
+  res = []
+  for t in itertools.product("01", repeat=mask2.count("X")):
+    it = iter(t)
+    res.append(int("".join(next(it) if c == "X" else c for c in mask2), 2))
+  return res
+
+
+# In[ ]:
+
+
+#def find_nth(haystack, needle, n):
+#  parts= haystack.split(needle, n+1)
+#  if len(parts)<=n+1:
+#    return -1
+#  return len(haystack)-len(parts[-1])-len(needle)
+
+#def replace_at(instr, pos, new_char):
+#  l = list(instr)
+#  l[pos] = new_char
+#  return str.join('', l)
+
+#def get_variations(mf):
+#  varias = []
+#  mf2 = mf.replace('0','.')
+#  varct = mf.count('X')
+#  varias.append(mf2)
+#  log.debug(f"[get_variations({mf})] ct={varct} repr={mf2}")
+#  #for n in range(0, varct):
+#  #  pos = find_nth(mf, 'X', n)
+#  #  log.debug(f"#{n} at {pos}")
+#  lct = 0
+#  while('X' in varias[0]):
+#    lct += 1
+#    if lct > 99_999:
+#      raise Exception(f"get_variations FAILSAFE on in={mf}")
+#    log.trace(f"partial-varias={varias}")
+#    next_varias = varias.copy()
+#    pos = varias[0].find('X')
+#    for mfit in varias:
+#      next_varias.remove(mfit)
+#      mf0 = replace_at(mfit, pos, '0')
+#      mf1 = replace_at(mfit, pos, '1')
+#      next_varias.append([mf0, mf1])
+#    varias = aoc.flatten(next_varias)
+#  log.trace(f"final varias={varias}")
+#  return varias
+
+def solve_day14_b(los):
+  log.info(f"[solve_day14_b] #-instructions={len(los)}")
+  addrs = {}
+  for line in los:
+    if line.startswith('mask'):
+      mask = line.split(' ')[-1]
+      mask_float = mask.replace('1','0')
+      mask_or = mask.replace('X','0') #mask.replace('0','X').replace('X','0')
+      num_or = int(mask_or, 2)
+      log.debug(f"mask={mask}")
+      log.trace(f"  mask_float={mask_float}")
+      log.trace(f"  mask_or   ={mask_or }; num_or ={num_or}")
+    else:
+      new_addrs = {}
+      addr, val = mapl(int, filterl(lambda it: it != '', re.split(r'[^\d]', line)))
+      #new_val = (val | num_or) & num_and
+      # NOP?: If the bitmask bit is 0, the corresponding memory address bit is unchanged.
+      #  OR!: If the bitmask bit is 1, the corresponding memory address bit is overwritten with 1.
+      new_addr = addr | num_or
+      log.trace(f"        addr={    addr:>8b} ; := {    addr}")
+      #log.trace(f"      num_or={num_or:>8b} ; := {num_or}")
+      ##log.trace(f"    addr-ORd={new_addr:>8b}")
+      log.trace(f"    new-addr={new_addr:>8b} ; := {new_addr}")
+      #mf = re.search(r'X.*', mask_float)[0]
+      #log.trace(f"  mask_float={mf:>8}")
+      #for varia in get_variations(mask_float):
+      #  #['0....0', '0....1', '1....0', '1....1']
+      #  mask_and = varia.replace('.', '1')
+      #  mask_or =  varia.replace('.', '0')
+      #  num_and = int(mask_and, 2)
+      #  num_or = int(mask_or, 2)
+      #  idx = (new_addr | num_or) & num_and
+      #  new_addrs[idx] = 1
+      #log.debug(f"instruct={[addr, val]} new_addr={new_addr}, new_addrs-#={len(new_addrs.keys())}")
+      #for addr2 in new_addrs.keys():
+      #  addrs[addr2] = val
+      for addr2 in get_possible_addrs(mask, addr):
+        addrs[addr2] = val
+  res = sum(addrs.values())
+  log.info(f"[solve_day14_b] value-sum={res} from addrs-#={len(addrs.keys())} addrs[#1-#3]={list(addrs.items())[0:3]}")
+  log.trace(f"  {addrs}")
+  return res
+
+
+# In[ ]:
+
+
+tests = """
+mask = 000000000000000000000000000000X1001X
+mem[42] = 100
+mask = 00000000000000000000000000000000X0XX
+mem[26] = 1
+""".strip().split("\n")
+
+#log.setLevel(aoc.LOGLEVEL_TRACE) # logging.DEBUG
+#log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
+solve_day14_b(tests)
+
+
+# In[ ]:
+
+
+#log.setLevel(logging.INFO)
+#ins = aoc.read_file_to_list('./in/day14.in')
+solve_day14_b(ins)
+
+
+# In[ ]:
+
+
+# [- 2020 Day 14 Solutions - : adventofcode](https://www.reddit.com/r/adventofcode/comments/kcr1ct/2020_day_14_solutions/)
+# overly clever by user wzkx
+
+if EXEC_EXTRAS:
+  d = open("./in/day14.in","rt").read().splitlines()
+  W = 36 # tthe input was tested with assert len(e[7:])==W
+
+  def parse_mask(mask):
+    m = v = 0
+    for c in mask:     # X10
+      mb = int(c=='X') # 100
+      vb = int(c=='1') # 010
+      m = (m<<1)|mb
+      v = (v<<1)|vb
+    return m,v
+
+  mem = {}
+  for e in d:
+    if e.startswith('mask'):
+      m,v = parse_mask(e[7:])
+    else:
+      addr = int(e[e.find('[')+1:e.find(']')]); value = int(e[e.find('=')+2:])
+      mem[addr] = v|(m&value)
+  print(sum(mem.values()))
+
+  mem = {}
+  for e in d:
+    if e.startswith('mask'):
+      m,v = parse_mask(e[7:])
+    else:
+      addr = int(e[e.find('[')+1:e.find(']')]); value = int(e[e.find('=')+2:])
+      addr = [addr | v]
+      for i in range(W):
+        if m&(2**i):
+          addr0 = [a & ~(m&(2**i)) for a in addr]
+          addr1 = [a |  (m&(2**i)) for a in addr]
+          addr = addr0 + addr1
+      for a in addr:
+        mem[a] = value
+  print(sum(mem.values()))
+
+
+# In[ ]:
+
+
+# [- 2020 Day 14 Solutions - : adventofcode](https://www.reddit.com/r/adventofcode/comments/kcr1ct/2020_day_14_solutions/)
+# User thomasahle
+
+if EXEC_EXTRAS:
+  import re, sys
+  #tests = sys.stdin.read()
+  cmds = re.findall("(?:(mask)|(mem)\[(\d+)\]) = ([X\d]+)", str.join("\n", tests))
+  log.info(cmds)
+  memory, mask = {}, "X" * 36
+  for is_mask, is_mem, loc, val in cmds:
+      if is_mask: mask = val
+      else: memory[int(loc)] = int("".join(v if x == "X" else x
+              for x, v in zip(mask, bin(int(val))[2:].zfill(36))), 2)
+  print(sum(memory.values()))
+  #...
+  for is_mask, is_mem, loc, val in cmds:
+      if is_mask: mask = val; continue
+      for bits in map(iter, itertools.product("01", repeat=mask.count("X"))):
+          locbits = []
+          for x, v in zip(mask, bin(int(loc))[2:].zfill(36)):
+              locbits.append(next(bits) if x == "X" else {"0": v, "1": "1"}[x])
+          memory[int("".join(locbits), 2)] = int(val)
+  print(sum(memory.values()))
 
 
 # In[ ]:
