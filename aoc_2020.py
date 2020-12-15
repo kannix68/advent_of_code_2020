@@ -2515,82 +2515,219 @@ solve_day14_b(tests)
 # In[ ]:
 
 
-#log.setLevel(logging.INFO)
-#ins = aoc.read_file_to_list('./in/day14.in')
 solve_day14_b(ins)
 
 
+# ### Day 15: Rambunctious Recitation
+
 # In[ ]:
 
 
-# [- 2020 Day 14 Solutions - : adventofcode](https://www.reddit.com/r/adventofcode/comments/kcr1ct/2020_day_14_solutions/)
-# overly clever by user wzkx
-
-if EXEC_EXTRAS:
-  d = open("./in/day14.in","rt").read().splitlines()
-  W = 36 # tthe input was tested with assert len(e[7:])==W
-
-  def parse_mask(mask):
-    m = v = 0
-    for c in mask:     # X10
-      mb = int(c=='X') # 100
-      vb = int(c=='1') # 010
-      m = (m<<1)|mb
-      v = (v<<1)|vb
-    return m,v
-
-  mem = {}
-  for e in d:
-    if e.startswith('mask'):
-      m,v = parse_mask(e[7:])
+def solve15a(l, steps=10):
+  log.debug(f"[solve15a(l)] called with l={l}")
+  seen = {}
+  last_spoken = None
+  for idx, n in enumerate(l):
+    last_spoken = n
+    if n in seen:
+      seen[n].append(idx+1)
     else:
-      addr = int(e[e.find('[')+1:e.find(']')]); value = int(e[e.find('=')+2:])
-      mem[addr] = v|(m&value)
-  print(sum(mem.values()))
-
-  mem = {}
-  for e in d:
-    if e.startswith('mask'):
-      m,v = parse_mask(e[7:])
+      seen[n] = [idx+1]
+    log.debug(f"idx#{idx+1}, n={n}, * seen[n]={seen[n]}")
+  #log.trace(f"  seen={seen}")
+  for idx in range(idx+2, steps+len(l)-idx):
+    #log.debug(f"idx#{idx}, last_spoken={last_spoken}, seen-len={len(seen)}")
+    #log.trace(f"  seen={seen}")
+    if len(seen[last_spoken])==1:
+      n = 0
     else:
-      addr = int(e[e.find('[')+1:e.find(']')]); value = int(e[e.find('=')+2:])
-      addr = [addr | v]
-      for i in range(W):
-        if m&(2**i):
-          addr0 = [a & ~(m&(2**i)) for a in addr]
-          addr1 = [a |  (m&(2**i)) for a in addr]
-          addr = addr0 + addr1
-      for a in addr:
-        mem[a] = value
-  print(sum(mem.values()))
+      n = seen[last_spoken][-1] - seen[last_spoken][-2]
+    if n in seen:
+      seen[n].append(idx)
+    else:
+      seen[n] = [idx]
+    log.trace(f"  new n={n}; seen={seen}")
+    log.debug(f"idx#{idx}, n={n}, last_spoken={last_spoken}, seen-len={len(seen)}")
+    last_spoken = n
+  log.info(f"[solve15a] idx#{idx}, n={n}, last_spoken={last_spoken}, seen-len={len(seen)}")
+  return n
 
 
 # In[ ]:
 
 
-# [- 2020 Day 14 Solutions - : adventofcode](https://www.reddit.com/r/adventofcode/comments/kcr1ct/2020_day_14_solutions/)
-# User thomasahle
+tests = "0,3,6"
+#log.setLevel(aoc.LOGLEVEL_TRACE)
+#log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
+res = solve15a(mapl(int, tests.split(',')), steps=10)
+# 0*, 3*, 6*, 0, 3, 3, 1, 0, 4, 0
+log.info(f"testing result={0}")
 
-if EXEC_EXTRAS:
-  import re, sys
-  #tests = sys.stdin.read()
-  cmds = re.findall("(?:(mask)|(mem)\[(\d+)\]) = ([X\d]+)", str.join("\n", tests))
-  log.info(cmds)
-  memory, mask = {}, "X" * 36
-  for is_mask, is_mem, loc, val in cmds:
-      if is_mask: mask = val
-      else: memory[int(loc)] = int("".join(v if x == "X" else x
-              for x, v in zip(mask, bin(int(val))[2:].zfill(36))), 2)
-  print(sum(memory.values()))
-  #...
-  for is_mask, is_mem, loc, val in cmds:
-      if is_mask: mask = val; continue
-      for bits in map(iter, itertools.product("01", repeat=mask.count("X"))):
-          locbits = []
-          for x, v in zip(mask, bin(int(loc))[2:].zfill(36)):
-              locbits.append(next(bits) if x == "X" else {"0": v, "1": "1"}[x])
-          memory[int("".join(locbits), 2)] = int(val)
-  print(sum(memory.values()))
+
+# In[ ]:
+
+
+res = solve15a([1, 3, 2], steps=2020)
+assert( 1 == res )
+
+res = solve15a([2, 1, 3], steps=2020)
+assert( 10 == res )
+
+res = solve15a([1, 2, 3], steps=2020)
+assert( 27 == res )
+
+res = solve15a([2, 3, 1], steps=2020)
+assert( 78 == res )
+
+res = solve15a([3, 2, 1], steps=2020)
+assert( 438 == res )
+
+res = solve15a([3, 1, 2], steps=2020)
+assert( 1836 == res )
+
+
+# In[ ]:
+
+
+ins = aoc.read_file_to_str('./in/day15.in').strip().split(',')
+ins = mapl(int, ins)
+res = solve15a(ins, steps=2020)
+#log.setLevel(logging.DEBUG)
+log.info(f"Day 15 a solution: {res} from {ins}")
+
+
+# In[ ]:
+
+
+def solve15b(l, steps=10):
+  log.info(f"[solve15b(l)] called with list-len={len(l)}, steps={steps:,}")
+  seen = {}
+  last_spoken = None
+  for idx, n in enumerate(l):
+    last_spoken = n
+    if n in seen:
+      #seen[n].append(idx+1)
+      seen[n] = [seen[n][-1], idx+1]
+    else:
+      seen[n] = [idx+1]
+    #log.debug(f"idx#{idx+1}, n={n}, * seen[n]={seen[n]}")
+  seen_lens = {}
+  for n in seen:
+    seen_lens[n] = len(seen[n])  
+  for idx in range(idx+2, steps+len(l)-idx):
+    if idx % 10_000_000 == 0 and idx < steps:
+      log.info(f"  calculating, @ idx={idx:,}")
+    if seen_lens[last_spoken] == 1: #len(seen[last_spoken]) == 1:
+      n = 0
+    else:
+      n = seen[last_spoken][-1] - seen[last_spoken][-2]
+    if n in seen:
+      #seen[n].append(idx)
+      seen[n] = [seen[n][-1], idx]
+      seen_lens[n] = 2
+    else:
+      seen[n] = [idx]
+      seen_lens[n] = 1
+    #log.debug(f"idx#{idx}, n={n}, last_spoken={last_spoken}, seen-len={len(seen)}")
+    last_spoken = n
+  log.info(f"[solve15b] idx#{idx:,}, n={n}, last_spoken={last_spoken}, seen-len={len(seen)}")
+  return n
+
+
+# In[ ]:
+
+
+# Part a soltions still valid !
+res = solve15b([1, 3, 2], steps=2020)
+assert( 1 == res )
+res = solve15b([2, 1, 3], steps=2020)
+assert( 10 == res )
+res = solve15b([1, 2, 3], steps=2020)
+assert( 27 == res )
+res = solve15b([2, 3, 1], steps=2020)
+assert( 78 == res )
+res = solve15b([3, 2, 1], steps=2020)
+assert( 438 == res )
+res = solve15b([3, 1, 2], steps=2020)
+assert( 1836 == res )
+
+
+# In[ ]:
+
+
+#nsteps = 30000000
+nsteps = 30_000_000
+
+def run15b(l, steps, cond):
+  if cond is not None and not EXEC_RESOURCE_HOGS:
+    # omit resource intensive tests
+    return
+  start_tm = int(time.time())
+  res = solve15b(l, steps=nsteps)
+  if cond is not None:
+    assert( cond == res )
+  took_tm = int(time.time()) - start_tm
+  log.info(f"result={res} took {took_tm}s")
+
+
+# In[ ]:
+
+
+# Given 0,3,6, the 30000000th number spoken is 175594.
+run15b([0, 3, 6], nsteps, 175594)
+
+
+# In[ ]:
+
+
+# Given 1,3,2, the 30000000th number spoken is 2578.
+run15b([1, 3, 2], nsteps, 2578)
+
+
+# In[ ]:
+
+
+# Given 2,1,3, the 30000000th number spoken is 3544142.
+run15b([2, 1, 3], nsteps, 3544142)
+
+
+# In[ ]:
+
+
+# Given 1,2,3, the 30000000th number spoken is 261214.
+run15b([1, 2, 3], nsteps, 261214)
+
+
+# In[ ]:
+
+
+# Given 2,3,1, the 30000000th number spoken is 6895259.
+run15b([2, 3, 1], nsteps, 6895259)
+
+
+# In[ ]:
+
+
+# Given 3,2,1, the 30000000th number spoken is 18.
+run15b([3, 2, 1], nsteps, 18)
+
+
+# In[ ]:
+
+
+# Given 3,1,2, the 30000000th number spoken is 362.
+run15b([3, 1, 2], nsteps, 362)
+
+
+# In[ ]:
+
+
+if EXEC_RESOURCE_HOGS:
+  log.info("Day 15 b solution:")
+  run15b(ins, nsteps, None)
+else:
+  log.info("Day 15 b solution: [[already solved]] - omitting")  
 
 
 # In[ ]:
