@@ -2733,5 +2733,222 @@ else:
 # In[ ]:
 
 
+### Day 16: Ticket Translation
+
+
+# In[ ]:
+
+
+tests = """
+class: 1-3 or 5-7
+row: 6-11 or 33-44
+seat: 13-40 or 45-50
+
+your ticket:
+7,1,14
+
+nearby tickets:
+7,3,47
+40,4,50
+55,2,20
+38,6,12
+""".strip()
+
+
+# In[ ]:
+
+
+def parse_day16_input(s):
+  los = s.split("\n")
+  md = 'fields'
+  myticket = []
+  other_tickets = []
+  fields = {}
+  for line in los:
+    if line == '':
+      continue
+    if line == 'your ticket:':
+      md = 'my_ticket'
+      continue
+    elif line == 'nearby tickets:':
+      md = 'other_tickets'
+      continue
+    if md == 'fields':
+      fld, vals = line.split(':')
+      avals = mapl(lambda it: it.strip() , vals.split(' or '))
+      for idx, aval in enumerate(avals):
+        aval = mapl(int, aval.split('-'))
+        avals[idx] = aval
+      fields[fld] = avals
+    elif md == 'my_ticket' or md == 'other_tickets':
+      this_ticket = mapl(int, line.split(','))
+      if md == 'my_ticket':
+        my_ticket = this_ticket
+      else:
+        other_tickets.append(this_ticket)
+  return {'fields':fields, 'my_ticket':my_ticket, 'other_tickets':other_tickets}
+
+def solve16a(ticket_info):
+  #log.info(f"ticket_info={ticket_info}")
+  valid_nums = []
+  for field in ticket_info['fields'].keys():
+    for entry in ticket_info['fields'][field]:
+      min, max = entry
+      for n in range(min, max+1):
+        valid_nums.append(n)
+  valid_nums = sorted(set(valid_nums))
+  #log.info(f"valid_nums={valid_nums}")
+  invalid_nums = []
+  for this_ticket in ticket_info['other_tickets']:
+    for n in this_ticket:
+      if not n in valid_nums:
+        invalid_nums.append(n)
+  ticket_error_rate = sum(invalid_nums)
+  log.info(f"ticket_error_rate={ticket_error_rate} invalid_nums={invalid_nums}")
+  return ticket_error_rate
+
+
+# In[ ]:
+
+
+ticket_info = parse_day16_input(tests)
+solve16a(ticket_info)
+
+
+# In[ ]:
+
+
+ins = aoc.read_file_to_str('./in/day16.in')
+ticket_info = parse_day16_input(ins)
+solve16a(ticket_info)
+
+
+# In[ ]:
+
+
+print("Day 16 b")
+
+tests2 = """
+class: 0-1 or 4-19
+row: 0-5 or 8-19
+seat: 0-13 or 16-19
+
+your ticket:
+11,12,13
+
+nearby tickets:
+3,9,18
+15,1,5
+5,14,9
+""".strip()
+
+
+# In[ ]:
+
+
+def solve16b(ticket_info):
+  #log.info(f"ticket_info={ticket_info}")
+  fields = ticket_info['fields']
+  my_ticket = ticket_info['my_ticket']
+  other_tickets = ticket_info['other_tickets']
+  all_tickets = other_tickets.copy()
+  all_tickets.append(my_ticket)
+  log.info(f"[solve16b] start all_tickets_len={len(all_tickets)}")
+  all_valid_nums = []
+  valid_nums = {}
+  for field in fields.keys():
+    valid_nums[field] = []
+    for entry in fields[field]:
+      min, max = entry
+      for n in range(min, max+1):
+        valid_nums[field].append(n)
+        all_valid_nums.append(n)
+  for field in valid_nums.keys():
+    valid_nums[field] = sorted(set(valid_nums[field]))
+  all_valid_nums = sorted(set(all_valid_nums))
+  log.trace(f"valid_nums={valid_nums}")
+  invalid_tickets = []
+  for this_ticket in all_tickets:
+    for n in this_ticket:
+      if not n in all_valid_nums:
+        invalid_tickets.append(this_ticket)
+        break
+  for this_ticket in invalid_tickets:
+    log.debug(f"removing invalid ticket {this_ticket}")
+    other_tickets.remove(this_ticket)
+    all_tickets.remove(this_ticket)
+  log.info(f"[solve16b] weedd all_tickets_len={len(all_tickets)}")
+  
+  num_fields = len(ticket_info['fields'])
+  log.info(f"[solve16b] num_fields={num_fields}")
+  assert( len(my_ticket) == num_fields)
+  
+  idx_maybe_field = {}
+  for idx in range(num_fields):
+    idx_maybe_field[idx] = []
+    ticket_nums_at_idx = mapl(lambda it: it[idx], all_tickets)
+    for field in fields:
+      if set(ticket_nums_at_idx).issubset(set(valid_nums[field])):
+        log.debug(f"idx={idx} field={field} OK for values={ticket_nums_at_idx}")
+        idx_maybe_field[idx].append(field)
+
+  idx_map = {}
+  for i in range(1, 1001):
+    lens = mapl(lambda it: len(it[1]), idx_maybe_field.items()) # index-order is implcit
+    log.trace(lens)
+    found_this_loop = []
+    for idx, l in enumerate(lens):
+      if l == 0:
+        continue
+      #if not idx in idx_maybe_field.keys(): # already found
+      #  continue
+      if l == 1:
+        fieldnm = idx_maybe_field[idx][0]
+        found_this_loop.append(fieldnm)
+        idx_map[fieldnm] = idx
+        idx_maybe_field[idx] = []
+    log.debug(f"loop {i} idx_map={idx_map}")
+    for f in found_this_loop:
+      for k in idx_maybe_field.keys():
+        if f in idx_maybe_field[k]:
+          idx_maybe_field[k].remove(f)
+    if len(idx_map.keys()) >= num_fields:
+      break
+    if i >= 1000:
+      raise Exception("FAILSAFE")
+  return idx_map
+
+
+# In[ ]:
+
+
+ticket_info = parse_day16_input(tests)
+solve16b(ticket_info)
+
+
+# In[ ]:
+
+
+ticket_info = parse_day16_input(tests2)
+solve16b(ticket_info)
+
+
+# In[ ]:
+
+
+ticket_info = parse_day16_input(ins)
+idx_map = solve16b(ticket_info)
+my_ticket = ticket_info['my_ticket']
+f = 1
+for k,v in idx_map.items():
+  if k.startswith('departure'):
+    log.info(f"field-idx={[k, v]} myticket-val={my_ticket[v]}")
+    f *= my_ticket[v]
+log.info(f"Day 16 b solution: {f}") # not 930240
+
+
+# In[ ]:
+
+
 
 
