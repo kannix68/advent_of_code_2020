@@ -2947,6 +2947,328 @@ for k,v in idx_map.items():
 log.info(f"Day 16 b solution: {f}") # not 930240
 
 
+# ### Day 17: Conway Cubes
+
+# In[ ]:
+
+
+tests = """
+.#.
+..#
+###
+""".strip()
+tests = mapl(list, tests.split("\n"))
+log.info(tests)
+
+
+# In[ ]:
+
+
+# solution TODO
+
+
+# ### Day 18: : Operation Order
+
+# In[ ]:
+
+
+# This definitely is/would be LISP territory !
+
+
+# In[ ]:
+
+
+def parse_equation18a(s):
+  """Parse / tokenize a single "equation"."""
+  l = re.split(r'(?=[\+\-\*\/\(\)])|(?<=[\+\-\*\/\(\)])', s)
+  l = filterl(lambda it: it != '', mapl(lambda it: it.strip(), l))
+  l = mapl(lambda it: int(it) if not (it in ['+','-','*','/','(',')']) else it, l)
+  log.debug(f"[parse_equation18a] returns={l}")
+  return l
+
+def rindex_list(elem, l):
+  """Return the index of the rightmost element in list."""
+  return len(l) - list(reversed(l)).index(elem) - 1
+
+def find_matching_close_paren_idx(lst):
+  """Assumes input list starting with '(', finds matching ')' and returns it's index.
+    If not found, returns -1."""
+  tgtcount = 0
+  tgtidx = -1
+  for idx in range(len(lst)):
+    if lst[idx] == ')':
+      tgtcount -= 1
+    elif lst[idx] == '(':
+      tgtcount += 1
+    if tgtcount < 1:
+      tgtidx = idx
+      break
+  return tgtidx
+  
+def calc18a(l):
+  log.debug(f"[calc18a] l={l}")
+  rest = l
+  ict = 0
+  while( len(rest)>1 ):
+    ict += 1
+    lval, rest = [rest[0], rest[1:]]
+    log.trace(f"  in [lval, rest]={[lval, rest]} rest-len={len(rest)}")
+    if lval == '(':
+      rest = [lval] + rest # re-assemble
+      ridx = find_matching_close_paren_idx(rest)
+      sublst = rest[1:ridx] # last/rightmost index of closing parens
+      new_rest = rest[ridx+1:]
+      log.trace(f"calcparen lval={lval} sublst={sublst} new-rest={new_rest} from={rest}")
+      lval = calc18a(sublst.copy())
+      rest = [lval] + new_rest
+    else:
+      op, rest = [rest[0], rest[1:]]
+      rval = rest[0]
+      log.trace(f"  op-mode {[op, rest]} lval={lval} op={op} rval={rval} all-rest={rest}")
+      if rval == '(':
+        idx = find_matching_close_paren_idx(rest)
+        sublst = rest[1:idx]
+        new_rest = rest[idx+1:]
+        log.trace(f"calcparen (lval={lval}) rval sublst={sublst} new-rest={new_rest} from {rest}")
+        rval = calc18a(sublst.copy())
+        rest = [op] + new_rest
+        log.trace(f"  calcparen rval={rval} sublst={sublst} new-rest={new_rest} from {rest}")
+      if op == '+':
+        lval += rval
+        rest = [lval] + rest[1:]
+      elif op == '*':
+        lval *= rval
+        rest = [lval] + rest[1:]
+      else:
+        raise Exception(f"unhandled operator {op}")
+    log.trace(f"  loop-end: lval={lval}; new-list={rest}")
+    if len(rest)>1 and rest[1] == ')': # found result of parns in val
+      log.debug("  next is ')' group closing, break")
+      break
+  log.debug(f"  returning val={lval}; from={l}")
+  return lval
+
+
+# In[ ]:
+
+
+#log.setLevel(aoc.LOGLEVEL_TRACE)
+#log.setLevel(logging.DEBUG)
+#log.setLevel(logging.INFO)
+
+test = """
+1 + 2 * 3 + 4 * 5 + 6
+""".strip()
+testlst = parse_equation18a(test)
+res = calc18a(testlst)
+print("test result", res)
+
+
+# In[ ]:
+
+
+test = """
+1 + (2 * 3) + (4 * (5 + 6))
+""".strip()
+assert( 51 == calc18a(parse_equation18a(test)))
+
+
+# In[ ]:
+
+
+test = """
+2 * 3 + (4 * 5)
+""".strip()
+res = calc18a(parse_equation18a(test))
+assert( 26 == calc18a(parse_equation18a(test)))
+
+
+# In[ ]:
+
+
+test = """
+5 + (8 * 3 + 9 + 3 * 4 * 3)
+""".strip()
+expectd = 437
+assert( expectd == calc18a(parse_equation18a(test)))
+
+
+# In[ ]:
+
+
+test = """
+5 * 9 * (7 * 3 * 3 + 9 * 3 + (8 + 6 * 4))
+""".strip()
+expectd = 12240
+assert( expectd == calc18a(parse_equation18a(test)))
+
+
+# In[ ]:
+
+
+test = """
+(1 + 2)
+""".strip()
+expectd = 3
+assert( expectd == calc18a(parse_equation18a(test)))
+
+
+# In[ ]:
+
+
+test = """
+((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2
+""".strip()
+expectd = 13632
+assert( expectd == calc18a(parse_equation18a(test)))
+
+
+# In[ ]:
+
+
+ins = aoc.read_file_to_list('./in/day18.in')
+csum = 0
+for eqstr in ins:
+  csum += calc18a(parse_equation18a(eqstr))
+log.info(f"Day 18 a solution: equations cumsum={csum}")
+
+
+# In[ ]:
+
+
+print("Day 18 b")
+def calc18b(l):
+  log.debug(f"[calc18b] l={l}")
+  rest = l
+  ict = 0
+  while( len(rest)>1 ):
+    ict += 1
+    lval, rest = [rest[0], rest[1:]]
+    log.trace(f"  >in [lval, rest]={[lval, rest]} rest-len={len(rest)}")
+    if lval == '(':
+      rest = [lval] + rest # re-assemble
+      ridx = find_matching_close_paren_idx(rest)
+      sublst = rest[1:ridx] # last/rightmost index of closing parens
+      new_rest = rest[ridx+1:]
+      log.trace(f"calcparen lval={lval} sublst={sublst} new-rest={new_rest} from={rest}")
+      lval = calc18b(sublst.copy())
+      rest = [lval] + new_rest
+      log.trace(f"  cprv new-rest={rest}")
+    else:
+      op, rest = [rest[0], rest[1:]]
+      rval = rest[0]
+      log.trace(f"  op-mode {[op, rest]} lval={lval} op={op} rval={rval} all-rest={rest}")
+      if rval == '(':
+        idx = find_matching_close_paren_idx(rest)
+        sublst = rest[1:idx]
+        new_rest = rest[idx+1:]
+        log.trace(f"calcparen (lval={lval}) rval sublst={sublst} new-rest={new_rest} from {rest}")
+        rval = calc18b(sublst.copy())
+        rest = [rval] + new_rest
+        log.trace(f"  calcparen rval={rval} sublst={sublst} new-rest={new_rest} from {rest}")
+      if op == '+':
+        lval += rval
+        rest = [lval] + rest[1:]
+        log.debug(f"    (+)=> rval={rval}, lval={lval}, new rest={rest}")
+      elif op == '*':
+        # postpone multiplication ! Rather, recurse fun-call for r-value
+        log.debug(f"  PROD in [lval, op, rest]={[lval, op, rest]} rest-len={len(rest)}")
+        if len(rest) > 1:
+          rval = calc18b(rest.copy())          
+        lval *= rval
+        rest = []
+        log.debug(f"    (*)=> rval={rval}, lval={lval}, new rest={rest}")
+      else:
+        raise Exception(f"unhandled operator {op}")
+    log.trace(f"  loop-end: lval={lval}; new-list={rest}")
+    if len(rest)>1 and rest[1] == ')': # found result of parens in val
+      log.debug("  next is ')' group closing, break")
+      break
+  log.debug(f"[calc18b] RC={lval} from {l}")
+  return lval
+
+
+# In[ ]:
+
+
+test = """
+1 + 2 * 3 + 4 * 5 + 6
+""".strip()
+testlst = parse_equation18a(test)
+res = calc18b(testlst)
+print("test result", res)
+
+
+# In[ ]:
+
+
+test = """
+1 + (2 * 3) + (4 * (5 + 6))
+""".strip()
+expectd = 51
+res = calc18b(parse_equation18a(test))
+assert( expectd == res)
+log.info(f"test result={res}")
+
+
+# In[ ]:
+
+
+test = """
+2 * 3 + (4 * 5)
+""".strip()
+expectd = 46
+res = calc18b(parse_equation18a(test))
+assert( expectd == res)
+log.info(f"test result={res}")
+
+
+# In[ ]:
+
+
+test = """
+5 + (8 * 3 + 9 + 3 * 4 * 3)
+""".strip()
+expectd = 1445
+res = calc18b(parse_equation18a(test))
+assert( expectd == res)
+log.info(f"test result={res}")
+
+
+# In[ ]:
+
+
+test = """
+5 * 9 * (7 * 3 * 3 + 9 * 3 + (8 + 6 * 4))
+""".strip()
+expectd = 669060
+res = calc18b(parse_equation18a(test))
+assert( expectd == res)
+log.info(f"test result={res}")
+
+
+# In[ ]:
+
+
+test = """
+((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2
+""".strip()
+expectd = 23340
+res = calc18b(parse_equation18a(test))
+assert( expectd == res)
+log.info(f"test result={res}")
+
+
+# In[ ]:
+
+
+ins = aoc.read_file_to_list('./in/day18.in')
+csum = 0
+for eqstr in ins:
+  csum += calc18b(parse_equation18a(eqstr))
+log.info(f"Day 18 b solution: equations cumsum={csum}")
+
+
 # In[ ]:
 
 
