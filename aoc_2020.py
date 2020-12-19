@@ -2967,6 +2967,323 @@ log.info(tests)
 # solution TODO
 
 
+# In[ ]:
+
+
+class Grid3d:
+  """Grid of 3d-cells, discrete 3d space, each cell represents a cube."""
+
+  def __init__(self):
+    log.debug("[Grid3d] constructor.")
+
+  def initialize(self, pattern):
+    self.pattern0 = pattern
+    self.points = []
+    z = 0
+    for y in range(len(pattern)):
+      for x in range(len(pattern[0])):
+        if pattern[y][x] == '#':
+          self.points.append( (x, y, z) )
+
+  def report(self):
+    return f"#pts={len(self.points)} {self.points}"
+
+  def get_layer(self, z):
+    return filterl(lambda it: z == it[2], self.points)
+
+  def get_zrange(self):
+    zs = mapl(lambda it: it[2], self.points)
+    return range(min(zs), max(zs)-min(zs)+1)
+
+  def get_layer_repr(self, z):
+    xs = mapl(lambda it: it[0], self.points)
+    ys = mapl(lambda it: it[1], self.points)
+    extent2d = [[min(xs), max(xs)], [min(ys), max(ys)]]
+    dim_x, dim_y = [ max(xs) - min(xs) + 1, max(ys) - min(ys) + 1 ]
+    x_ofst = -min(xs)
+    y_ofst = -min(ys)
+    rows = []
+    for y in range(0, max(ys)+y_ofst+1):
+      s = ''
+      for x in range(0, max(xs)+x_ofst+1):
+        if (x-x_ofst, y-y_ofst, z) in self.points:
+          s += '#'
+        else:
+          s += '.'
+      rows.append(s)
+    return f"grid-lvl@z={z} dims={[dim_x, dim_y]} extents={self.get_extents()} x-ofst={-x_ofst} y-ofst={-y_ofst}\n" +str.join("\n", rows)  
+
+  def get_num_neighbors(self, pt):
+    xp, yp, zp = pt
+    num_neighbors = 0
+    for z in range(zp-1, zp+2):
+      for y in range(yp-1, yp+2):
+        for x in range(xp-1, xp+2):
+          if (x, y, z) == pt:  # identity, given point itself
+            continue
+          if (x, y, z) in self.points:
+            num_neighbors += 1
+    return num_neighbors
+
+  def get_extents(self):
+    xs = mapl(lambda it: it[0], self.points)
+    ys = mapl(lambda it: it[1], self.points)
+    zs = mapl(lambda it: it[2], self.points)
+    return [[min(xs), max(xs)], [min(ys), max(ys)], [min(zs), max(zs)]]
+
+
+class ConwayCubeGrid(Grid3d):
+  """Conway cellular automaton in 3d, inheriting from class Grid3d."""
+
+  def __init__(self):
+    log.debug("[ConwayCubeGrid] constructor.")
+    self.t = 0
+  
+  def iterate(self, steps=1):
+    for i in range(steps):
+      exts = self.get_extents()
+      new_pts = copy.deepcopy(self.points)
+      for x in range(exts[0][0]-1, exts[0][1]+2):
+        for y in range(exts[1][0]-1, exts[1][1]+2):
+          #if x == 0:
+          #  log.trace(f"iter-row {y}")
+          for z in range(exts[2][0]-1, exts[2][1]+2):
+            pt = (x, y, z)
+            is_active = pt in self.points
+            #if is_active:
+            #  log.info(f"iterate: pt={pt} was active")
+            nn = self.get_num_neighbors(pt)
+            if is_active:
+              if not (nn in [2, 3]):
+                #log.trace(f"iter-remove {pt}")
+                new_pts.remove( pt )
+            else:
+              if nn == 3:
+                #log.trace(f"iter-append {pt}")
+                new_pts.append( pt )
+      self.points = new_pts
+      self.t += 1
+
+
+# In[ ]:
+
+
+grid = Grid3d()
+log.info(f"grid={grid}")
+grid.initialize(tests)
+log.info(f"grid rpt:\n{grid.report()}")
+assert 1 == grid.get_num_neighbors( (0,0,0) )
+assert 2 == grid.get_num_neighbors( (2,0,0) )
+assert 5 == grid.get_num_neighbors( (1,1,0) )
+assert 0 == grid.get_num_neighbors( (-2,-1,0) )
+
+grid.get_extents()
+
+
+# In[ ]:
+
+
+grid = ConwayCubeGrid()
+log.info(f"grid={grid}")
+grid.initialize(tests)
+#log.info(f"grid rpt:\n{grid.report()}")
+assert 1 == grid.get_num_neighbors( (0,0,0) )
+assert 2 == grid.get_num_neighbors( (2,0,0) )
+assert 5 == grid.get_num_neighbors( (1,1,0) )
+assert 0 == grid.get_num_neighbors( (-2,-1,0) )
+
+grid.get_extents()
+log.info(f"grid @ t={grid.t} extents={grid.get_extents()} numpts={len(grid.points)}")
+log.info(grid.get_layer_repr(0))
+#res = grid.get_layer(0)
+
+for i in range(1, 7):
+  grid.iterate()
+  log.info(f"Iterated: grid @ t={grid.t} extents={grid.get_extents()} numpts={len(grid.points)}")
+  for z in grid.get_zrange():
+    ##log.info(f"grid @ t={grid.t} pts@z=0 {res}")
+    #log.info(grid.get_layer_repr(z))
+    True
+
+
+# In[ ]:
+
+
+grid = ConwayCubeGrid()
+grid.initialize(tests)
+grid.iterate(steps=6)
+assert( 6 == grid.t )
+assert( 112 == len(grid.points) )
+
+
+# In[ ]:
+
+
+ins = aoc.read_file_to_str('in/day17.in').strip()
+log.info(f"pattern=\n{ins}")
+ins = mapl(list, ins.split("\n"))
+grid = ConwayCubeGrid()
+grid.initialize(ins)
+grid.iterate(steps=6)
+assert( 6 == grid.t )
+res = len(grid.points)
+log.info(f"Day 18 a solution: num points after 6 iterations: {res}")
+
+
+# In[ ]:
+
+
+class Grid4d:
+  """Grid of 4d-cells, each cell represents a 4d-cube, a hypercube, a tesseract."""
+
+  def __init__(self):
+    log.debug("[Grid4d] constructor.")
+
+  def initialize(self, pattern):
+    self.pattern0 = pattern
+    self.points = []
+    z, w = 0, 0
+    for y in range(len(pattern)):
+      for x in range(len(pattern[0])):
+        if pattern[y][x] == '#':
+          self.points.append( (x, y, z, w) )
+
+  def report(self):
+    return f"#pts={len(self.points)} {self.points}"
+
+  def get_layer(self, z, w):
+    return filterl(lambda it: z == it[2] and w == it[3], self.points)
+
+  def get_zrange(self):
+    zs = mapl(lambda it: it[2], self.points)
+    return range(min(zs), max(zs)+1)
+
+  def get_wrange(self):
+    ws = mapl(lambda it: it[3], self.points)
+    return range(min(ws), max(ws)+1)
+
+  def get_layer_repr(self, z, w):
+    xs = mapl(lambda it: it[0], self.points)
+    ys = mapl(lambda it: it[1], self.points)
+    extent2d = [[min(xs), max(xs)], [min(ys), max(ys)]]
+    dim_x, dim_y = [ max(xs) - min(xs) + 1, max(ys) - min(ys) + 1 ]
+    x_ofst = -min(xs)
+    y_ofst = -min(ys)
+    rows = []
+    for y in range(0, max(ys)+y_ofst+1):
+      s = ''
+      for x in range(0, max(xs)+x_ofst+1):
+        if (x-x_ofst, y-y_ofst, z, w) in self.points:
+          s += '#'
+        else:
+          s += '.'
+      rows.append(s)
+    return f"grid-lvl@[z,w]={[z,w]} dims={[dim_x, dim_y]} extents={self.get_extents()}"       + f"x-ofst={-x_ofst} y-ofst={-y_ofst}\n" +str.join("\n", rows)  
+
+  def get_num_neighbors(self, pt):
+    xp, yp, zp, wp = pt
+    num_neighbors = 0
+    for w in range(wp-1, wp+2):
+      for z in range(zp-1, zp+2):
+        for y in range(yp-1, yp+2):
+          for x in range(xp-1, xp+2):
+            if (x, y, z, w) == pt:  # identity, given point itself
+              continue
+            if (x, y, z, w) in self.points:
+              num_neighbors += 1
+    return num_neighbors
+
+  def get_extents(self):
+    xs = mapl(lambda it: it[0], self.points)
+    ys = mapl(lambda it: it[1], self.points)
+    zs = mapl(lambda it: it[2], self.points)
+    ws = mapl(lambda it: it[3], self.points)
+    return [[min(xs), max(xs)], [min(ys), max(ys)], [min(zs), max(zs)], [min(ws), max(ws)]]
+
+
+class ConwayTesseractGrid(Grid4d):
+  """Conway cellular automaton in 4d, inheriting from class Grid4d."""
+
+  def __init__(self):
+    log.debug("[ConwayTesseractGrid] constructor.")
+    self.t = 0
+  
+  def iterate(self, steps=1):
+    for i in range(steps):
+      exts = self.get_extents()
+      new_pts = copy.deepcopy(self.points)
+      for x in range(exts[0][0]-1, exts[0][1]+2):
+        for y in range(exts[1][0]-1, exts[1][1]+2):
+          #if x == 0:
+          #  log.trace(f"iter-row {y}")
+          for w in range(exts[3][0]-1, exts[3][1]+2):
+            for z in range(exts[2][0]-1, exts[2][1]+2):
+              pt = (x, y, z, w)
+              is_active = pt in self.points
+              #if is_active:
+              #  log.info(f"iterate: pt={pt} was active")
+              nn = self.get_num_neighbors(pt)
+              if is_active:
+                if not (nn in [2, 3]):
+                  #log.trace(f"iter-remove {pt}")
+                  new_pts.remove( pt )
+              else:
+                if nn == 3:
+                  #log.trace(f"iter-append {pt}")
+                  new_pts.append( pt )
+      self.points = new_pts
+      self.t += 1
+
+
+# In[ ]:
+
+
+grid = ConwayTesseractGrid()
+log.info(f"grid={grid}")
+grid.initialize(tests)
+#log.info(f"grid rpt:\n{grid.report()}")
+assert 1 == grid.get_num_neighbors( (0,0,0,0) )
+assert 2 == grid.get_num_neighbors( (2,0,0,0) )
+assert 5 == grid.get_num_neighbors( (1,1,0,0) )
+assert 0 == grid.get_num_neighbors( (-2,-1,0,0) )
+
+grid.get_extents()
+log.info(f"grid @ t={grid.t} extents={grid.get_extents()} numpts={len(grid.points)}")
+log.info(grid.get_layer_repr(0, 0))
+#res = grid.get_layer(0)
+
+grid.iterate()
+log.info(grid.get_layer_repr(-1, -1))
+log.info(grid.get_layer_repr(0, 0))
+log.info(grid.get_layer_repr(1, 1))
+
+grid.iterate()
+log.info(grid.get_layer_repr(-2, -2))
+log.info(grid.get_layer_repr(0, 0))
+log.info(grid.get_layer_repr(2, 0))
+
+grid.iterate(steps=4)
+assert( 6 == grid.t )
+assert( 848 == len(grid.points) )
+
+
+# In[ ]:
+
+
+if EXEC_RESOURCE_HOGS: # took 226 seconds on my notebook
+  grid = ConwayTesseractGrid()
+  grid.initialize(ins)
+  start_tm = int(time.time())
+  for i in range(1, 7):
+    grid.iterate(steps=1)
+    npts = len(grid.points)
+    took_tm = int(time.time()) - start_tm
+    log.info(f"after grid iteration {i}: num-points={npts:,} after {took_tm}s")
+  assert( 6 == grid.t )
+  res = len(grid.points)
+  log.info(f"Day 18 b solution: num points after 6 iterations: {res}")
+
+
 # ### Day 18: : Operation Order
 
 # In[ ]:
@@ -3267,6 +3584,324 @@ csum = 0
 for eqstr in ins:
   csum += calc18b(parse_equation18a(eqstr))
 log.info(f"Day 18 b solution: equations cumsum={csum}")
+
+
+# ### Day 19: Monster Messages
+
+# In[ ]:
+
+
+def parse_day19_rules(s):
+  rules = s.split("\n")
+  rules = mapl(lambda it: it.split(': '), rules)
+  return rules
+
+def parse_day19(s):
+  rules, samples = s.strip().split("\n\n")
+  rules = parse_day19_rules(rules)
+  samples = samples.split("\n")
+  log.debug(f"parsed:\n  rules=\n{rules}\n  samples=\n{samples}")
+  return rules, samples
+
+def solve19a(rules):
+  log.debug(f"[solve19a] started")
+  pd = {}
+  for rule in rules:
+    rule_num, rule_expr = rule
+    if rule_expr.startswith('"') and rule_expr.endswith(''):
+      log.debug(f"  added key={rule_num} rule={rule_expr}")
+      pd[rule_num] = rule_expr.replace('"', '')
+  for i in range(10_000):
+    found_new_key = False
+    for rule in rules:
+      rule_num, rule_expr = rule
+      if not rule_num in pd.keys():
+        ree = rule_expr.split(' ')
+        rules_contained = set(filterl(lambda it: it != '|', ree))
+        log.trace(f"unparsed rule {rule}, rules_contained={rules_contained}")
+        if set(rules_contained).issubset(pd.keys()):
+          log.trace(f"can add {ree}")
+          r = str.join('', mapl(lambda it: pd[it] if it in pd.keys() else it, ree))
+          pd[rule_num] = '(' + r + ')'
+          found_new_key = True
+          log.debug(f"  added key={rule_num} rule={r}")
+        else:
+          log.trace(f"can't add {ree}")
+    if not found_new_key:
+      break
+  log.debug(f"[solve19a] parsed-dict={pd}")
+  return pd
+
+
+# In[ ]:
+
+
+tests = """
+0: 1 2
+1: "a"
+2: 1 3 | 3 1
+3: "b"
+""".strip()
+
+
+# In[ ]:
+
+
+log.setLevel(logging.INFO)
+rules = parse_day19_rules(tests)
+log.info(f"test: parsed rules\n{rules}")
+pd = solve19a(rules)
+rule0 = pd['0']
+assert( re.match(rule0, "aab") )
+assert( re.match(rule0, "aba") )
+assert( not re.match(rule0, "bba") )
+
+
+# In[ ]:
+
+
+tests = """
+0: 4 1 5
+1: 2 3 | 3 2
+2: 4 4 | 5 5
+3: 4 5 | 5 4
+4: "a"
+5: "b"
+""".strip()
+
+rules = parse_day19_rules(tests)
+log.info(f"test: parsed rules\n{rules}")
+pd = solve19a(rules)
+log.info(f"tests parse-dir={pd}")
+rule0='^' + pd['0'] + '$'
+
+samples = "aaaabb,aaabab,abbabb,abbbab,aabaab,aabbbb,abaaab,ababbb".split(',')
+for sample in samples:
+  assert( re.match(rule0, sample) )
+assert( not re.match(rule0, "baaabb") )
+assert( not re.match(rule0, "ababba") )
+
+
+# In[ ]:
+
+
+tests = """
+0: 4 1 5
+1: 2 3 | 3 2
+2: 4 4 | 5 5
+3: 4 5 | 5 4
+4: "a"
+5: "b"
+
+ababbb
+bababa
+abbbab
+aaabbb
+aaaabbb
+""".strip()
+
+
+# In[ ]:
+
+
+#ababbb and abbbab match
+#bababa, aaabbb, and aaaabbb
+
+rules, samples = parse_day19(tests)
+pd = solve19a(rules)
+log.info(f"rule0={pd['0']}")
+rule0='^' + pd['0'] + '$'
+smatching = 0
+for sample in samples:
+  if re.match(rule0, sample):
+    #log.info(f"{sample} matches {rule0}")
+    smatching +=1
+  else:
+    #log.info(f"{sample} NOmatch {rule0}")
+    True
+log.info(f"matching-samples-#={smatching}")
+assert ( smatching == 2)
+
+
+# In[ ]:
+
+
+ins = aoc.read_file_to_str('./in/day19.in')
+rules, samples = parse_day19(ins)
+pd = solve19a(rules)
+log.debug(f"rule0={pd['0']}")
+rule0='^' + pd['0'] + '$'
+log.info(f"parsed-rules, len(rule0)={len(rule0)}")
+smatching = 0
+for sample in samples:
+  if re.match(rule0, sample):
+    smatching +=1
+    #log.info(f"{sample} matches {rule0}")
+  #else:
+  #  log.info(f"{sample} NOmatch {rule0}")
+    
+log.info(f"matching-samples-#={smatching}")
+
+
+# In[ ]:
+
+
+print("Day 19 b")
+def solve19b(rules, max_depth=30):
+  log.debug(f"[solve19b] started")
+  pd = {}
+  rules_keys = []
+  for rule in rules:
+    rule_num, rule_expr = rule
+    rules_keys.append(rule_num)
+    if rule_expr.startswith('"') and rule_expr.endswith(''):
+      log.debug(f"  added key={rule_num} rule={rule_expr}")
+      pd[rule_num] = rule_expr.replace('"', '')
+  missing_rules_keys = rules_keys.copy()
+  for k in pd.keys():
+    missing_rules_keys.remove(k)
+    
+  for i in range(1, max_depth+2):
+    log.debug(f"  loop#={i}")
+    found_new_key = False
+    for rule in rules:
+      rule_num, rule_expr = rule
+
+      # apply part 2 conditions:
+      if rule_num == '8':
+        rule_expr = '42 | 42 8'
+      elif rule_num == '11':
+        rule_expr = '42 31 | 42 11 31'
+
+      if not rule_num in pd.keys():
+        ree = rule_expr.split(' ')
+        rules_contained = set(filterl(lambda it: it != '|', ree))
+        log.trace(f"unparsed rule {rule}, rules_contained={rules_contained}")
+        if set(rules_contained).issubset(pd.keys()):
+          log.trace(f"can add {ree}")
+          r = str.join('', mapl(lambda it: pd[it] if it in pd.keys() else it, ree))
+          pd[rule_num] = '(' + r + ')'
+          found_new_key = True
+          missing_rules_keys.remove(rule_num)
+          log.debug(f"  added key={rule_num} rule={r}")
+        else:
+          log.trace(f"can't add {ree}")
+    if not found_new_key:
+      if not '0' in pd.keys():
+        log.debug(f"rule0 not found after {i} loops, rules-found={sorted(pd.keys())}")
+        log.debug(f"  rules_missing={sorted(missing_rules_keys)}")
+        log.debug(f"  rules[42]={pd['42']}")
+        log.debug(f"  rules[31]={pd['31']}")
+
+        # this is the re secret sauce expressing ca. conditions:
+        # > rule_expr = '42 | 42 8' :: 1..n of pattern 42
+        pd['8'] = f"({pd['42']})+"
+        # > rule_expr = '42 31 | 42 11 31' :: 1..n of pattern 42 followd by 31
+        #pd['11'] = f"({pd['42']})+({pd['31']})+" # the first and second + repeat count have to be same
+        ors = []
+        for i in range(1, 6):
+          pl = pd['42']
+          pr = pd['31']
+          ors.append(pl*i+pr*i)
+        pd['11'] = f"({str.join('|', ors)})"
+        # > 8 11
+        pd['0'] = f"{pd['8']}{pd['11']}"
+
+        log.debug(f"  rules[8]={pd['8']}")
+        log.debug(f"  len(rules[11])={len(pd['11'])}")
+        log.debug(f"  len(rules[0])={len(pd['0'])}")
+      break
+  log.debug(f"[solve19b] parsed-dict={pd}")
+  return pd
+
+
+# In[ ]:
+
+
+tests = """
+42: 9 14 | 10 1
+9: 14 27 | 1 26
+10: 23 14 | 28 1
+1: "a"
+11: 42 31
+5: 1 14 | 15 1
+19: 14 1 | 14 14
+12: 24 14 | 19 1
+16: 15 1 | 14 14
+31: 14 17 | 1 13
+6: 14 14 | 1 14
+2: 1 24 | 14 4
+0: 8 11
+13: 14 3 | 1 12
+15: 1 | 14
+17: 14 2 | 1 7
+23: 25 1 | 22 14
+28: 16 1
+4: 1 1
+20: 14 14 | 1 15
+3: 5 14 | 16 1
+27: 1 6 | 14 18
+14: "b"
+21: 14 1 | 1 14
+25: 1 1 | 1 14
+22: 14 14
+8: 42
+26: 14 22 | 1 20
+18: 15 15
+7: 14 5 | 1 21
+24: 14 1
+
+abbbbbabbbaaaababbaabbbbabababbbabbbbbbabaaaa
+bbabbbbaabaabba
+babbbbaabbbbbabbbbbbaabaaabaaa
+aaabbbbbbaaaabaababaabababbabaaabbababababaaa
+bbbbbbbaaaabbbbaaabbabaaa
+bbbababbbbaaaaaaaabbababaaababaabab
+ababaaaaaabaaab
+ababaaaaabbbaba
+baabbaaaabbaaaababbaababb
+abbbbabbbbaaaababbbbbbaaaababb
+aaaaabbaabaaaaababaa
+aaaabbaaaabbaaa
+aaaabbaabbaaaaaaabbbabbbaaabbaabaaa
+babaaabbbaaabaababbaabababaaab
+aabbbbbaabbbaaaaaabbbbbababaaaaabbaaabba
+""".strip()
+
+log.setLevel(logging.INFO)
+rules, samples = parse_day19(tests)
+max_samples_len = max(mapl(len, samples))
+log.debug(f"max_samples_len={max_samples_len}")
+pd = solve19b(rules, max_depth=max_samples_len)
+log.debug(f"rule0={pd['0']}")
+rule0='^' + pd['0'] + '$'
+log.info(f"parsed-rules, len(rule0)={len(rule0)}")
+
+smatching = 0
+for sample in samples:
+  if re.match(rule0, sample):
+    smatching +=1
+log.info(f"matching-samples-#={smatching}")
+assert( 12 == smatching )
+
+
+# In[ ]:
+
+
+log.setLevel(logging.INFO)
+rules, samples = parse_day19(ins)
+max_samples_len = max(mapl(len, samples))
+log.debug(f"max_samples_len={max_samples_len}")
+pd = solve19b(rules, max_depth=max_samples_len)
+log.debug(f"rule0={pd['0']}")
+rule0='^' + pd['0'] + '$'
+log.info(f"parsed-rules, len(rule0)={len(rule0)}")
+
+smatching = 0
+for sample in samples:
+  if re.match(rule0, sample):
+    smatching +=1
+log.info(f"matching-samples-#={smatching}")
 
 
 # In[ ]:
