@@ -3587,6 +3587,9 @@ log.info(f"Day 18 b solution: equations cumsum={csum}")
 
 
 # ### Day 19: Monster Messages
+# 
+# The most simple/elegant would be to create a grammar for this problem and parse the rules (lexx/yacc) etc.
+# But as a shortcut today I did a fallback on only using/constructing text regular expressions.
 
 # In[ ]:
 
@@ -3603,18 +3606,32 @@ def parse_day19(s):
   log.debug(f"parsed:\n  rules=\n{rules}\n  samples=\n{samples}")
   return rules, samples
 
-def solve19a(rules):
-  log.debug(f"[solve19a] started")
+def solve_day19(rules, max_depth=30, part=1):
+  log.debug(f"[solve19b] started")
   pd = {}
+  rules_keys = []
   for rule in rules:
     rule_num, rule_expr = rule
+    rules_keys.append(rule_num)
     if rule_expr.startswith('"') and rule_expr.endswith(''):
       log.debug(f"  added key={rule_num} rule={rule_expr}")
       pd[rule_num] = rule_expr.replace('"', '')
-  for i in range(10_000):
+  missing_rules_keys = rules_keys.copy()
+  for k in pd.keys():
+    missing_rules_keys.remove(k)
+    
+  for i in range(1, max_depth+2):
+    log.debug(f"  loop#={i}")
     found_new_key = False
     for rule in rules:
       rule_num, rule_expr = rule
+
+      if part == 2: # apply part 2 conditions:
+        if rule_num == '8':
+          rule_expr = '42 | 42 8'
+        elif rule_num == '11':
+          rule_expr = '42 31 | 42 11 31'
+
       if not rule_num in pd.keys():
         ree = rule_expr.split(' ')
         rules_contained = set(filterl(lambda it: it != '|', ree))
@@ -3624,12 +3641,35 @@ def solve19a(rules):
           r = str.join('', mapl(lambda it: pd[it] if it in pd.keys() else it, ree))
           pd[rule_num] = '(' + r + ')'
           found_new_key = True
+          missing_rules_keys.remove(rule_num)
           log.debug(f"  added key={rule_num} rule={r}")
         else:
           log.trace(f"can't add {ree}")
     if not found_new_key:
+      if not '0' in pd.keys():
+        log.debug(f"rule0 not found after {i} loops, rules-found={sorted(pd.keys())}")
+        log.debug(f"  rules_missing={sorted(missing_rules_keys)}")
+        if part == 2:
+          log.debug(f"  rules[42]={pd['42']}")
+          log.debug(f"  rules[31]={pd['31']}")
+          # THIS is the re secret sauce expressing ca. conditions:
+          # > rule_expr = '42 | 42 8' :: 1..n of pattern 42
+          pd['8'] = f"({pd['42']})+"
+          # > rule_expr = '42 31 | 42 11 31' :: 1..n of pattern 42 followd by 31
+          #pd['11'] = f"({pd['42']})+({pd['31']})+" # the first and second + repeat count have to be same
+          ors = []
+          for i in range(1, 6):
+            pl = pd['42']
+            pr = pd['31']
+            ors.append(pl*i+pr*i)
+          pd['11'] = f"({str.join('|', ors)})"
+          # > 8 11
+          pd['0'] = f"{pd['8']}{pd['11']}"
+          log.debug(f"  rules[8]={pd['8']}")
+          log.debug(f"  len(rules[11])={len(pd['11'])}")
+          log.debug(f"  len(rules[0])={len(pd['0'])}")
       break
-  log.debug(f"[solve19a] parsed-dict={pd}")
+  log.debug(f"[solve19b] parsed-dict={pd}")
   return pd
 
 
@@ -3650,7 +3690,7 @@ tests = """
 log.setLevel(logging.INFO)
 rules = parse_day19_rules(tests)
 log.info(f"test: parsed rules\n{rules}")
-pd = solve19a(rules)
+pd = solve_day19(rules)
 rule0 = pd['0']
 assert( re.match(rule0, "aab") )
 assert( re.match(rule0, "aba") )
@@ -3671,7 +3711,7 @@ tests = """
 
 rules = parse_day19_rules(tests)
 log.info(f"test: parsed rules\n{rules}")
-pd = solve19a(rules)
+pd = solve_day19(rules)
 log.info(f"tests parse-dir={pd}")
 rule0='^' + pd['0'] + '$'
 
@@ -3708,7 +3748,7 @@ aaaabbb
 #bababa, aaabbb, and aaaabbb
 
 rules, samples = parse_day19(tests)
-pd = solve19a(rules)
+pd = solve_day19(rules)
 log.info(f"rule0={pd['0']}")
 rule0='^' + pd['0'] + '$'
 smatching = 0
@@ -3728,7 +3768,7 @@ assert ( smatching == 2)
 
 ins = aoc.read_file_to_str('./in/day19.in')
 rules, samples = parse_day19(ins)
-pd = solve19a(rules)
+pd = solve_day19(rules)
 log.debug(f"rule0={pd['0']}")
 rule0='^' + pd['0'] + '$'
 log.info(f"parsed-rules, len(rule0)={len(rule0)}")
@@ -3747,76 +3787,6 @@ log.info(f"matching-samples-#={smatching}")
 
 
 print("Day 19 b")
-def solve19b(rules, max_depth=30):
-  log.debug(f"[solve19b] started")
-  pd = {}
-  rules_keys = []
-  for rule in rules:
-    rule_num, rule_expr = rule
-    rules_keys.append(rule_num)
-    if rule_expr.startswith('"') and rule_expr.endswith(''):
-      log.debug(f"  added key={rule_num} rule={rule_expr}")
-      pd[rule_num] = rule_expr.replace('"', '')
-  missing_rules_keys = rules_keys.copy()
-  for k in pd.keys():
-    missing_rules_keys.remove(k)
-    
-  for i in range(1, max_depth+2):
-    log.debug(f"  loop#={i}")
-    found_new_key = False
-    for rule in rules:
-      rule_num, rule_expr = rule
-
-      # apply part 2 conditions:
-      if rule_num == '8':
-        rule_expr = '42 | 42 8'
-      elif rule_num == '11':
-        rule_expr = '42 31 | 42 11 31'
-
-      if not rule_num in pd.keys():
-        ree = rule_expr.split(' ')
-        rules_contained = set(filterl(lambda it: it != '|', ree))
-        log.trace(f"unparsed rule {rule}, rules_contained={rules_contained}")
-        if set(rules_contained).issubset(pd.keys()):
-          log.trace(f"can add {ree}")
-          r = str.join('', mapl(lambda it: pd[it] if it in pd.keys() else it, ree))
-          pd[rule_num] = '(' + r + ')'
-          found_new_key = True
-          missing_rules_keys.remove(rule_num)
-          log.debug(f"  added key={rule_num} rule={r}")
-        else:
-          log.trace(f"can't add {ree}")
-    if not found_new_key:
-      if not '0' in pd.keys():
-        log.debug(f"rule0 not found after {i} loops, rules-found={sorted(pd.keys())}")
-        log.debug(f"  rules_missing={sorted(missing_rules_keys)}")
-        log.debug(f"  rules[42]={pd['42']}")
-        log.debug(f"  rules[31]={pd['31']}")
-
-        # this is the re secret sauce expressing ca. conditions:
-        # > rule_expr = '42 | 42 8' :: 1..n of pattern 42
-        pd['8'] = f"({pd['42']})+"
-        # > rule_expr = '42 31 | 42 11 31' :: 1..n of pattern 42 followd by 31
-        #pd['11'] = f"({pd['42']})+({pd['31']})+" # the first and second + repeat count have to be same
-        ors = []
-        for i in range(1, 6):
-          pl = pd['42']
-          pr = pd['31']
-          ors.append(pl*i+pr*i)
-        pd['11'] = f"({str.join('|', ors)})"
-        # > 8 11
-        pd['0'] = f"{pd['8']}{pd['11']}"
-
-        log.debug(f"  rules[8]={pd['8']}")
-        log.debug(f"  len(rules[11])={len(pd['11'])}")
-        log.debug(f"  len(rules[0])={len(pd['0'])}")
-      break
-  log.debug(f"[solve19b] parsed-dict={pd}")
-  return pd
-
-
-# In[ ]:
-
 
 tests = """
 42: 9 14 | 10 1
@@ -3872,7 +3842,7 @@ log.setLevel(logging.INFO)
 rules, samples = parse_day19(tests)
 max_samples_len = max(mapl(len, samples))
 log.debug(f"max_samples_len={max_samples_len}")
-pd = solve19b(rules, max_depth=max_samples_len)
+pd = solve_day19(rules, part=2, max_depth=max_samples_len)
 log.debug(f"rule0={pd['0']}")
 rule0='^' + pd['0'] + '$'
 log.info(f"parsed-rules, len(rule0)={len(rule0)}")
@@ -3892,7 +3862,7 @@ log.setLevel(logging.INFO)
 rules, samples = parse_day19(ins)
 max_samples_len = max(mapl(len, samples))
 log.debug(f"max_samples_len={max_samples_len}")
-pd = solve19b(rules, max_depth=max_samples_len)
+pd = solve_day19(rules, part=2, max_depth=max_samples_len)
 log.debug(f"rule0={pd['0']}")
 rule0='^' + pd['0'] + '$'
 log.info(f"parsed-rules, len(rule0)={len(rule0)}")
@@ -3902,6 +3872,426 @@ for sample in samples:
   if re.match(rule0, sample):
     smatching +=1
 log.info(f"matching-samples-#={smatching}")
+
+
+# ### Day 20: Jurassic Jigsaw
+
+# In[ ]:
+
+
+tests = """
+Tile 2311:
+..##.#..#.
+##..#.....
+#...##..#.
+####.#...#
+##.##.###.
+##...#.###
+.#.#.#..##
+..#....#..
+###...#.#.
+..###..###
+
+Tile 1951:
+#.##...##.
+#.####...#
+.....#..##
+#...######
+.##.#....#
+.###.#####
+###.##.##.
+.###....#.
+..#.#..#.#
+#...##.#..
+
+Tile 1171:
+####...##.
+#..##.#..#
+##.#..#.#.
+.###.####.
+..###.####
+.##....##.
+.#...####.
+#.##.####.
+####..#...
+.....##...
+
+Tile 1427:
+###.##.#..
+.#..#.##..
+.#.##.#..#
+#.#.#.##.#
+....#...##
+...##..##.
+...#.#####
+.#.####.#.
+..#..###.#
+..##.#..#.
+
+Tile 1489:
+##.#.#....
+..##...#..
+.##..##...
+..#...#...
+#####...#.
+#..#.#.#.#
+...#.#.#..
+##.#...##.
+..##.##.##
+###.##.#..
+
+Tile 2473:
+#....####.
+#..#.##...
+#.##..#...
+######.#.#
+.#...#.#.#
+.#########
+.###.#..#.
+########.#
+##...##.#.
+..###.#.#.
+
+Tile 2971:
+..#.#....#
+#...###...
+#.#.###...
+##.##..#..
+.#####..##
+.#..####.#
+#..#.#..#.
+..####.###
+..#.#.###.
+...#.#.#.#
+
+Tile 2729:
+...#.#.#.#
+####.#....
+..#.#.....
+....#..#.#
+.##..##.#.
+.#.####...
+####.#.#..
+##.####...
+##..#.##..
+#.##...##.
+
+Tile 3079:
+#.#.#####.
+.#..######
+..#.......
+######....
+####.#..#.
+.#...#.##.
+#.#####.##
+..#.###...
+..#.......
+..#.###...
+""".strip()
+
+
+# In[ ]:
+
+
+def get_dimens(num_tiles):
+  for gridx in range(1, num_tiles+1):
+    for gridy in range(1, num_tiles+1):
+      if gridx * gridy == num_tiles:
+        if gridx > 1 and gridy > 1:
+          log.info(f"[get_dimens] {gridx}x{gridy} dimen possible.")
+
+def get_borders(tile):
+  borders = set()
+  rows = tile.split("\n")
+  borders.add(rows[0])
+  borders.add(rows[0][::-1])  # reversed
+  borders.add(rows[-1])
+  borders.add(rows[-1][::-1])  # reversed
+  col0 = str.join('', mapl(lambda it: it[0], rows))
+  col_last = str.join('', mapl(lambda it: it[-1], rows) )
+  borders.add(col0)
+  borders.add(col0[::-1])  # reversed
+  borders.add(col_last)
+  borders.add(col_last[::-1])  # reversed
+  return borders
+
+def find_corner_tiles(tiles):
+  tile_keys = tiles.keys()
+  borders = {}
+  bsects = {}
+  for key in tile_keys:
+    borders[key] = get_borders(tiles[key])
+    bsects[key] = []
+  for combi in itertools.permutations(tile_keys, 2):
+    key1, key2 = combi
+    b1 = borders[key1]
+    b2 = borders[key2]
+    bsects[key1].append( len( b1 & b2 ) )
+  corner_tiles = set()
+  for key in tile_keys:
+    #log.info(f"key: {key} {bsects[key]}")
+    bct = len( filterl(lambda it: it > 0,  bsects[key]) )
+    if bct < 3:
+      #log.info(f"border-tile: {key}")
+      corner_tiles.add(key)
+    #elif bct == 4:
+    #  log.info(f"middle-tile: {key}")
+  return corner_tiles
+
+def find_border_tiles(tiles):
+  tile_keys = tiles.keys()
+  borders = {}
+  bsects = {}
+  for key in tile_keys:
+    borders[key] = get_borders(tiles[key])
+    bsects[key] = []
+  for combi in itertools.permutations(tile_keys, 2):
+    key1, key2 = combi
+    b1 = borders[key1]
+    b2 = borders[key2]
+    bsects[key1].append( len( b1 & b2 ) )
+  border_tiles = set()
+  for key in tile_keys:
+    bct = len( filterl(lambda it: it > 0,  bsects[key]) )
+    if bct == 3:
+      border_tiles.add(key)
+  return border_tiles
+
+def parse_tiles(s):
+  d = {}
+  for tile_str in s.split("\n\n"):
+    tile_repr = ''
+    for idx, line in enumerate(tile_str.split("\n")):
+      if idx == 0:
+        tile_id = int( line.replace('Tile ','').replace(':','') )
+      else:
+        tile_repr += line + "\n"
+    d[tile_id] = tile_repr.strip()
+  return d
+
+
+# In[ ]:
+
+
+tiles = parse_tiles(tests)
+num_tiles = len(tiles.keys())
+tile_keys = tiles.keys()
+log.info(f"tests num-tiles={num_tiles}")
+get_dimens(num_tiles)
+find_corner_tiles(tiles)
+
+
+# In[ ]:
+
+
+ins = aoc.read_file_to_str('in/day20.in').strip()
+tiles = parse_tiles(ins)
+num_tiles = len(tiles.keys())
+log.info(f"input num-tiles={num_tiles}")
+res = find_corner_tiles(tiles)
+log.info(f"ins corner-tiles={res}")
+res = np.prod(list(res))
+log.info(f"Day 20 a solution: border-tiles-product={res}")
+
+
+# In[ ]:
+
+
+print("Day 20 b")
+
+
+# In[ ]:
+
+
+from math import sqrt
+
+def flip_vert_tile(s):
+  """Flip a tile vertically, return str repr."""
+  return str.join("\n", list(reversed(s.split("\n"))))
+
+def flip_horiz_tile(s):
+  """Flip a tile horizontally, return str repr."""
+  new_los = []
+  for line in s.split("\n"):
+    new_los.append(str.join('', reversed(line)))
+  return str.join("\n", new_los)
+  
+def rotate_tile(s):
+  """Left-rotate of tile representation, return str repr."""
+  lol = mapl(lambda it: list(it), s.split("\n"))
+  new_los = []
+  for islice in reversed(range(len(lol))):
+    line = str.join('', mapl(lambda it: it[islice], lol))
+    new_los.append(line)
+  log.trace("rot-repr=\n"+str.join("\n", new_los))
+  return str.join("\n", new_los)
+
+def get_tile_transforms(s):
+  """Provide all transforms of a tile as list, including identity."""
+  transforms = [s]  # start with identity as first elem
+  current_repr = s
+  for rot_num in range(3):
+    current_repr = rotate_tile(current_repr)
+    transforms.append(current_repr)
+  current_repr = flip_vert_tile(s)
+  transforms.append(current_repr)
+  current_repr = flip_horiz_tile(s)
+  transforms.append(current_repr)
+  return transforms
+
+def create_image(tiles, tilekeys_left, img, y, x):
+  for tk, trepr in tilekeys_left.items():
+    if y > 0 and x > 0:
+      for tvari in get_tile_transforms( tiles[tk] ):
+        if fits_horiz(img[y][x-1], tvari):
+          img[y][x] = tvari
+          return img
+    elif y > 0:
+      connect_vert(img[y][x-i], img[y][x-i])
+    elif x > 0:
+      connect_vert(img[y][x-i], img[y][x-i])
+    True
+
+def assemble_image(tiles):
+  tiles_keys = tiles.keys()
+  num_tile = len(tiles)
+  image_width = sqrt(num_tiles)
+  corner_tiles = find_corner_tiles(tiles)
+  assert( 4 == len(corner_tiles) )
+  border_tiles = find_border_tiles(tiles)
+  assert( 4*(image_width-2) == len(corner_tiles) )
+  start_tile = list(corner_tiles)[0]
+  log.info(f"[assemble_image] starting; tiles_set={set(tiles_keys)}")
+  tilekeys_left = set(tiles_keys) - set([start_tile])
+  img = [[None for x in range(image_width)] for y in range(image_width)]
+  img[0][0] = tiles[start_tile]
+  create_image(tiles, tilekeys_left, img, 0, 1)
+  True
+
+
+# In[ ]:
+
+
+tiles = parse_tiles(tests)
+tile_keys = tiles.keys()
+num_tiles = len(tiles.keys())
+image_width = sqrt(num_tiles)
+log.info(f"tests num-tiles={num_tiles}; image_width={image_width}")
+if EXEC_EXTRAS:
+  assemble_image(tiles)
+
+
+# In[ ]:
+
+
+tiles = parse_tiles(ins)
+num_tiles = len(tiles.keys())
+tile_keys = tiles.keys()
+log.info(f"tests num-tiles={num_tiles}")
+get_dimens(num_tiles)
+res = find_corner_tiles(tiles)
+
+res = find_border_tiles(tiles)
+log.info(f"border-tiles-len={len(res)} res={res}")
+## dimensions are 12 x 12 ! 4 corner tiles, 20 border tiles
+
+
+# ### Day 21: Allergen Assessment
+
+# In[ ]:
+
+
+tests = """
+mxmxvkd kfcds sqjhc nhms (contains dairy, fish)
+trh fvjkl sbzzf mxmxvkd (contains dairy)
+sqjhc fvjkl (contains soy)
+sqjhc mxmxvkd sbzzf (contains fish)
+""".strip().split("\n")
+
+
+# In[ ]:
+
+
+def solve_day21(los, part=1):
+  ingreds_all = set()
+  log.info(f"[solve21a] num-lines={len(los)}")
+  allerg_assoc = {}
+  recips = []
+  for line in los:
+    ingreds, allergs = line.split(' (contains ')
+    ingreds = set(ingreds.strip().split(' '))
+    allergs = allergs.strip().replace(')','').split(', ')
+    log.debug(f"  ingreds={ingreds}; allergs={allergs}")
+    ingreds_all |= ingreds
+    recips.append({'ingreds':ingreds, 'allergs':allergs})
+    for allerg in allergs:
+      if not allerg in allerg_assoc:
+        allerg_assoc[allerg] = set(ingreds)
+      else:
+        allerg_assoc[allerg] &= set(ingreds)
+  for i in range(len(allerg_assoc.keys())):  # loop and weed max n times
+    found_allergs = filterl(lambda it: len(allerg_assoc[it]) == 1, allerg_assoc.keys())
+    found_ingreds = mapl(lambda it: list(allerg_assoc[it])[0], found_allergs)
+    for allerg in allerg_assoc.keys():
+      if allerg in found_allergs:
+        continue
+      allerg_assoc[allerg] -= set(found_ingreds)
+    if 1 == max( mapl(lambda it: len(allerg_assoc[it]), allerg_assoc.keys()) ):
+      break
+  allerg_assoc = {k:list(v)[0] for k,v in allerg_assoc.items()} # get rid of wrapping set per values
+  log.info(f"allerg_assoc={allerg_assoc}")
+  ingreds_pure = ingreds_all.copy()
+  for ingred_allergic in allerg_assoc.values():
+    ingred_allergic = ingred_allergic
+    ingreds_pure.remove(ingred_allergic)
+  log.info(f"ingreds-pure={ingreds_pure}")
+  ct = 0
+  for ingred_pure in ingreds_pure:
+    for recip in recips:
+      if ingred_pure in recip['ingreds']:
+        ct += 1
+  if part == 1:
+    return ct
+  vals_ordered = []
+  for k in sorted(allerg_assoc.keys()):
+    vals_ordered.append(allerg_assoc[k])
+  vals_str = str.join(',', vals_ordered)
+  log.info(f"vals_str=>{vals_str}<")
+  return vals_str
+
+
+# In[ ]:
+
+
+#log.setLevel(aoc.LOGLEVEL_TRACE)
+log.setLevel(logging.INFO)
+res = solve_day21(tests, part=1)
+assert( 5 == res )
+
+
+# In[ ]:
+
+
+ins = aoc.read_file_to_list('./in/day21.in')
+res = solve_day21(ins, part=1)
+logging.info(f"Day 21 a solution: {res}")
+
+
+# In[ ]:
+
+
+print("Day 21 b")
+#log.setLevel(aoc.LOGLEVEL_TRACE)
+#log.setLevel(logging.INFO)
+res = solve_day21(tests, part=2)
+assert( "mxmxvkd,sqjhc,fvjkl" == res )
+
+
+# In[ ]:
+
+
+res = solve_day21(ins, part=2)
+log.info(f"Day 21 b solution:\n>{res}<")
 
 
 # In[ ]:
