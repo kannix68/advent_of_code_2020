@@ -3,7 +3,7 @@
 
 # # Advent of Code 2020
 # 
-# This solution (Jupyter notebook; python3.7) by kannix68, @ 2020-12.  \
+# This solution (Jupyter notebook; python 3.7) by kannix68, @ 2020-12.  \
 # Using anaconda distro, conda v4.9.2. installation on MacOS v10.14.6 "Mojave".
 
 # ## Generic AoC code
@@ -13,6 +13,11 @@
 
 import sys
 import logging
+import itertools
+#from operator import mul
+import re
+
+import numpy as np
 
 import lib.aochelper as aoc
 from lib.aochelper import map_list as mapl
@@ -56,14 +61,6 @@ test_str = """
 1456""".strip()
 tests = list(map(int, test_str.split("\n")))
 log.warning(tests)
-
-
-# In[ ]:
-
-
-import itertools
-#from operator import mul
-import numpy as np
 
 
 # In[ ]:
@@ -407,12 +404,6 @@ iyr:2011 ecl:brn hgt:59in
 """.strip()
 tests = test_str.split("\n\n")
 log.debug(tests)
-
-
-# In[ ]:
-
-
-import re
 
 
 # In[ ]:
@@ -2240,13 +2231,6 @@ def egcd(a, b):
     g, y, x = egcd(b % a, a)
     return (g, x - (b // a) * y, y)
 
-#def egcd(a, b):
-#  if a == 0:
-#    return (b, 0, 1)
-#  else:
-#    g, y, x = egcd(b % a, a)
-#    return (g, x - (b // a) * y, y)
-
 #def modinv(a, m):
 #  g, x, y = egcd(a, m)
 #  if g != 1:
@@ -2415,43 +2399,6 @@ def get_possible_addrs(mask, addr):
 # In[ ]:
 
 
-#def find_nth(haystack, needle, n):
-#  parts= haystack.split(needle, n+1)
-#  if len(parts)<=n+1:
-#    return -1
-#  return len(haystack)-len(parts[-1])-len(needle)
-
-#def replace_at(instr, pos, new_char):
-#  l = list(instr)
-#  l[pos] = new_char
-#  return str.join('', l)
-
-#def get_variations(mf):
-#  varias = []
-#  mf2 = mf.replace('0','.')
-#  varct = mf.count('X')
-#  varias.append(mf2)
-#  log.debug(f"[get_variations({mf})] ct={varct} repr={mf2}")
-#  #for n in range(0, varct):
-#  #  pos = find_nth(mf, 'X', n)
-#  #  log.debug(f"#{n} at {pos}")
-#  lct = 0
-#  while('X' in varias[0]):
-#    lct += 1
-#    if lct > 99_999:
-#      raise Exception(f"get_variations FAILSAFE on in={mf}")
-#    log.trace(f"partial-varias={varias}")
-#    next_varias = varias.copy()
-#    pos = varias[0].find('X')
-#    for mfit in varias:
-#      next_varias.remove(mfit)
-#      mf0 = replace_at(mfit, pos, '0')
-#      mf1 = replace_at(mfit, pos, '1')
-#      next_varias.append([mf0, mf1])
-#    varias = aoc.flatten(next_varias)
-#  log.trace(f"final varias={varias}")
-#  return varias
-
 def solve_day14_b(los):
   log.info(f"[solve_day14_b] #-instructions={len(los)}")
   addrs = {}
@@ -2475,19 +2422,6 @@ def solve_day14_b(los):
       #log.trace(f"      num_or={num_or:>8b} ; := {num_or}")
       ##log.trace(f"    addr-ORd={new_addr:>8b}")
       log.trace(f"    new-addr={new_addr:>8b} ; := {new_addr}")
-      #mf = re.search(r'X.*', mask_float)[0]
-      #log.trace(f"  mask_float={mf:>8}")
-      #for varia in get_variations(mask_float):
-      #  #['0....0', '0....1', '1....0', '1....1']
-      #  mask_and = varia.replace('.', '1')
-      #  mask_or =  varia.replace('.', '0')
-      #  num_and = int(mask_and, 2)
-      #  num_or = int(mask_or, 2)
-      #  idx = (new_addr | num_or) & num_and
-      #  new_addrs[idx] = 1
-      #log.debug(f"instruct={[addr, val]} new_addr={new_addr}, new_addrs-#={len(new_addrs.keys())}")
-      #for addr2 in new_addrs.keys():
-      #  addrs[addr2] = val
       for addr2 in get_possible_addrs(mask, addr):
         addrs[addr2] = val
   res = sum(addrs.values())
@@ -2507,7 +2441,6 @@ mem[26] = 1
 """.strip().split("\n")
 
 #log.setLevel(aoc.LOGLEVEL_TRACE) # logging.DEBUG
-#log.setLevel(logging.DEBUG)
 log.setLevel(logging.INFO)
 solve_day14_b(tests)
 
@@ -3370,7 +3303,6 @@ def calc18a(l):
 
 
 #log.setLevel(aoc.LOGLEVEL_TRACE)
-#log.setLevel(logging.DEBUG)
 #log.setLevel(logging.INFO)
 
 test = """
@@ -4133,67 +4065,266 @@ def get_tile_transforms(s):
   for rot_num in range(3):
     current_repr = rotate_tile(current_repr)
     transforms.append(current_repr)
+
   current_repr = flip_vert_tile(s)
   transforms.append(current_repr)
+  for rot_num in range(3):
+    current_repr = rotate_tile(current_repr)
+    transforms.append(current_repr)
+
   current_repr = flip_horiz_tile(s)
   transforms.append(current_repr)
-  return transforms
+  for rot_num in range(3):
+    current_repr = rotate_tile(current_repr)
+    transforms.append(current_repr)
 
-def create_image(tiles, tilekeys_left, img, y, x):
-  for tk, trepr in tilekeys_left.items():
-    if y > 0 and x > 0:
+  return set(transforms)
+
+def fits_horiz(lefts, rights):
+  lhs = str.join('', mapl(lambda it: it[-1], lefts.split("\n")))
+  rhs = str.join('', mapl(lambda it: it[0], rights.split("\n")))
+  return lhs == rhs
+
+def fits_vert(tops, bottoms):
+  lhs = tops.split("\n")[-1]
+  rhs =  bottoms.split("\n")[0]
+  return lhs == rhs
+
+def get_next_coord(coord, image_width):
+  x, y = coord
+  nx = (x+1) % image_width
+  if x == image_width-1:
+    ny = y+1
+  else:
+    ny = y
+  log.trace(f"next-coord={(nx, ny)}")
+  return (nx, ny)
+
+def is_corner(coord, image_width):
+  b = (coord[0] in [0, image_width-1]) and (coord[1] in [0, image_width-1])
+  if b:
+    log.trace(f"{coord} is corner; image_width={image_width}")
+  return b
+
+def is_border(coord, image_width):
+  log.trace(f"{coord} is border image_width={image_width}")
+  b = not is_corner(coord, image_width) and     ((coord[0] in [0, image_width-1]) or (coord[1] in [0, image_width-1]))
+  if b:
+    log.info(f"{coord} is border; image_width={image_width}")
+  return b
+
+def create_image(tiles, tilekeys_left, img, imgidx, coord, corner_tiles, border_tiles, image_width):
+  x, y = coord
+  log.debug(f"[create_image] tks-left={len(tilekeys_left)}, @{coord}")
+  if x >= image_width or y >= image_width:
+    log.debug(f"FOUND\n{np.array(imgidx)}")
+    return True, img, imgidx
+  if y > 0 and x > 0:
+    #log.info(f" check h+v")
+    #if is_corner(coord, image_width):  # @ corner
+    #  tkl2 = tilekeys_left & corner_tiles
+    #elif is_border(coord, image_width):  # @border
+    #  tkl2 = tilekeys_left & border_tiles
+    #else:
+    #  tkl2 = tilekeys_left
+    #for tk in tkl2:
+    for tk in tilekeys_left:
+      for tvari in get_tile_transforms( tiles[tk] ):
+        if fits_horiz(img[y][x-1], tvari) and fits_vert(img[y-1][x], tvari):
+          tkl_new = tilekeys_left.copy(); tkl_new.remove(tk)
+          img_new = copy.deepcopy(img); img_new[y][x] = tvari
+          log.debug(f"found h+v match for tilekey={tk} @{coord}")
+          imgidx_new = copy.deepcopy(imgidx); imgidx_new[y][x] = tk
+          return create_image(tiles, tkl_new, img_new, imgidx_new, get_next_coord(coord, image_width), corner_tiles, border_tiles, image_width)
+  elif y > 0:
+    #log.info(f" check   v")
+    #if is_corner(coord, image_width):  # @ corner
+    #  tkl2 = tilekeys_left & corner_tiles
+    #else:  # @border
+    #  tkl2 = tilekeys_left & border_tiles
+    #for tk in tkl2:
+    for tk in tilekeys_left:
+      for tvari in get_tile_transforms( tiles[tk] ):
+        if fits_vert(img[y-1][x], tvari):
+          tkl_new = tilekeys_left.copy(); tkl_new.remove(tk)
+          img_new = copy.deepcopy(img); img_new[y][x] = tvari
+          imgidx_new = copy.deepcopy(imgidx); imgidx_new[y][x] = tk
+          log.debug(f"found h+v match for tilekey={tk} @{coord}")
+          return create_image(tiles, tkl_new, img_new, imgidx_new, get_next_coord(coord, image_width), corner_tiles, border_tiles, image_width)
+  elif x > 0:
+    #log.info(f" check h")
+    #if is_corner(coord, image_width):  # @ corner
+    #  tkl2 = tilekeys_left & corner_tiles
+    #else:  # @border
+    #  tkl2 = tilekeys_left & border_tiles
+    #for tk in tkl2:
+    for tk in tilekeys_left:
       for tvari in get_tile_transforms( tiles[tk] ):
         if fits_horiz(img[y][x-1], tvari):
-          img[y][x] = tvari
-          return img
-    elif y > 0:
-      connect_vert(img[y][x-i], img[y][x-i])
-    elif x > 0:
-      connect_vert(img[y][x-i], img[y][x-i])
-    True
+          tkl_new = tilekeys_left.copy(); tkl_new.remove(tk)
+          img_new = copy.deepcopy(img); img_new[y][x] = tvari
+          imgidx_new = copy.deepcopy(imgidx); imgidx_new[y][x] = tk
+          log.debug(f"found h+v match for tilekey={tk} @{coord}")
+          return create_image(tiles, tkl_new, img_new, imgidx_new, get_next_coord(coord, image_width), corner_tiles, border_tiles, image_width)
+  log.trace("[create_image] fall-out")
+  return False, img, imgidx
 
 def assemble_image(tiles):
   tiles_keys = tiles.keys()
-  num_tile = len(tiles)
-  image_width = sqrt(num_tiles)
+  num_tiles = len(tiles)
+  image_width = int(sqrt(num_tiles))
   corner_tiles = find_corner_tiles(tiles)
+  log.info(f"[assemble_image] corner-tiles-#={len(corner_tiles)}")
   assert( 4 == len(corner_tiles) )
   border_tiles = find_border_tiles(tiles)
-  assert( 4*(image_width-2) == len(corner_tiles) )
+  log.info(f"[assemble_image] border-tiles-#={len(border_tiles)}; image_width={image_width}")
+  assert( 4*(image_width-2) == len(border_tiles) )
   start_tile = list(corner_tiles)[0]
   log.info(f"[assemble_image] starting; tiles_set={set(tiles_keys)}")
   tilekeys_left = set(tiles_keys) - set([start_tile])
-  img = [[None for x in range(image_width)] for y in range(image_width)]
-  img[0][0] = tiles[start_tile]
-  create_image(tiles, tilekeys_left, img, 0, 1)
-  True
+  for vari in get_tile_transforms( tiles[start_tile] ):
+    img = [[None for x in range(image_width)] for y in range(image_width)]
+    imgidx = [[None for x in range(image_width)] for y in range(image_width)]
+    img[0][0] = vari
+    imgidx[0][0] = start_tile
+    log.debug(f"first corner tile img=\n{vari}")
+    img_found, img_final, imgidx_final = create_image(tiles, tilekeys_left, img, imgidx, get_next_coord((0,0), image_width), corner_tiles, border_tiles, image_width)
+    if img_found:
+      log.info(f"IMG found, idxs=\n{imgidx_final}")
+      break
+  assert( img_found )
+  return img_found, img_final, imgidx_final
+
+def get_image_repr(img):
+  img_len = len(img)
+  tile_len = len(img[0][0].split("\n"))
+  log.debug(f"[get_image_repr] num-tiles={img_len}^2={img_len**2} cells-per-tile={tile_len**2}")
+  images = copy.deepcopy(img)
+  for img_y in range(img_len):
+    for img_x in range(img_len):
+      images[img_y][img_x] = img[img_y][img_x].split("\n")  # split each tile line-wise
+  img_rows = []
+  for img_rowidx in range(img_len):
+    tiles_rows = []
+    for tile_rowidx in range(tile_len):
+      tiles_row = ""
+      for img_colidx in range(img_len):
+        tiles_row += images[img_rowidx][img_colidx][tile_rowidx]
+      tiles_rows.append(tiles_row)
+    img_rows.append(str.join("\n", tiles_rows))
+  img_repr = str.join("\n", img_rows)
+  return img_repr
+
+def show_image(img):
+  img_len = len(img)
+  tile_len = len(img[0][0].split("\n"))
+  log.info(f"[show_image] num-tiles={img_len}^2={img_len**2} cells-per-tile={tile_len**2}")
+  log.info("\n"+get_image_repr(img))
+
+def cut_tile_borders(tile):
+  los = tile.split("\n")
+  tile_len = len(los)
+  new_los = []
+  for idx, line in enumerate(los):
+    if idx in [0, tile_len-1]:
+      continue
+    new_line = line[1:-1]
+    assert(len(new_line) == tile_len-2)
+    new_los.append( new_line )
+  assert(len(new_los) == tile_len-2)
+  return str.join("\n", new_los)
+
+def cut_image_borders(img):
+  img_len = len(img)
+  for y in range(img_len):
+    for x in range(img_len):
+      tile = img[y][x]
+      tile = cut_tile_borders(tile)
+      img[y][x] = tile
+  return img
 
 
 # In[ ]:
 
 
-tiles = parse_tiles(tests)
-tile_keys = tiles.keys()
-num_tiles = len(tiles.keys())
-image_width = sqrt(num_tiles)
-log.info(f"tests num-tiles={num_tiles}; image_width={image_width}")
-if EXEC_EXTRAS:
-  assemble_image(tiles)
+sea_monster = """
+                  # 
+#    ##    ##    ###
+ #  #  #  #  #  #   
+"""
+
+def tiles_to_sea_npar(sea_los):
+  """Convert original tiles representation to a 'sea' numpy-array of 0s and 1s."""
+  tiles = parse_tiles(sea_los)
+  img_found, img, imgidx = assemble_image(tiles)
+  #show_image(test_img)
+  img_cut = cut_image_borders(img)
+  #show_image(test_img_cut)
+  img_cut = get_image_repr(img_cut)  # from x*x matrix to 1 str
+  image_los = img_cut.replace(".", "0 ").replace("#", "1 ").split("\n")
+  image_ar = np.array([[int(c) for c in seamst_line.strip().split(" ")] for seamst_line in image_los])
+  return image_ar
+
+# Thanks github user JesperDramsch:
+def variations_of(npar):
+  """Return identity and all rotation and flip-horiz flip-vert variations of np-array."""
+  varias = []
+  for i in range(4):
+    tfar = np.rot90(npar, i)
+    varias.append(tfar)
+    varias.append(np.flip(tfar, 0))
+    varias.append(np.flip(tfar, 1))
+  return varias
+
+# Inspired
+# Thanks github user JesperDramsch, via reddit aoc 2020 day 20 solutions/discussion:
+#   https://github.com/JesperDramsch/advent-of-code-1
+def eliminate_monsters(sea, seamst):
+  """Given 'sea' and 'seamonster' input numpy-arrays,
+  eliminate all variations of seamonster (rots, flips) from the sea,
+  return sea without monsters (np-array)."""
+
+  seamst_cct = seamst.sum()
+  seamst_varias = variations_of(seamst)
+
+  monsters_num = 0
+  while monsters_num == 0:
+    monster = seamst_varias.pop()
+    mst_y, mst_x = monster.shape
+    for y, x in np.ndindex(sea.shape):
+      sub_arr = sea[y : y + mst_y, x : x + mst_x].copy()
+      if not sub_arr.shape == monster.shape:
+        continue
+      sub_arr *= monster  # <= sea & monster
+      if np.sum(sub_arr) == seamst_cct:
+        monsters_num += 1
+        sea[y : y + mst_y, x : x + mst_x] -= monster  # => sea - monster
+  return sea
+
+sea_monster = sea_monster.strip("\n")
+#print(f">{sea_monster}<")
+# Thanks github user JesperDramsch:
+sea_monster_los = sea_monster.replace(" ", "0 ").replace("#", "1 ").split("\n")
+#log.info(f"\n{sea_monster_los}")
+seamst = np.array([[int(c) for c in seamst_line.strip().split(" ")] for seamst_line in sea_monster_los])
+seamst_cct = seamst.sum()
+log.info(f"Seamonster cell-count={seamst_cct}")
+log.info(f"\n{seamst}")
+
+sea_ar = tiles_to_sea_npar(tests)
+log.info(f"sea-nparray, shape={sea_ar.shape}::\n{sea_ar}")
+res = eliminate_monsters(sea_ar, seamst).sum()
+log.info(f"Day 21 b tests: rough-sea-count={res}")
+assert( 273 == res )
 
 
 # In[ ]:
 
 
-tiles = parse_tiles(ins)
-num_tiles = len(tiles.keys())
-tile_keys = tiles.keys()
-log.info(f"tests num-tiles={num_tiles}")
-get_dimens(num_tiles)
-res = find_corner_tiles(tiles)
-
-res = find_border_tiles(tiles)
-log.info(f"border-tiles-len={len(res)} res={res}")
-## dimensions are 12 x 12 ! 4 corner tiles, 20 border tiles
+sea_ar = tiles_to_sea_npar(ins)
+log.info(f"sea-nparray, shape={sea_ar.shape}::\n{sea_ar}")
+res = eliminate_monsters(sea_ar, seamst).sum()
+log.info(f"Day 21 b final solution: rough-sea-count={res}")
 
 
 # ### Day 21: Allergen Assessment
@@ -4250,6 +4381,7 @@ def solve_day21(los, part=1):
     for recip in recips:
       if ingred_pure in recip['ingreds']:
         ct += 1
+  log.info(f"day 21 part 1: count of pure ingredients occurences={ct}")
   if part == 1:
     return ct
   vals_ordered = []
@@ -4292,6 +4424,192 @@ assert( "mxmxvkd,sqjhc,fvjkl" == res )
 
 res = solve_day21(ins, part=2)
 log.info(f"Day 21 b solution:\n>{res}<")
+
+
+# ### Day 22: Crab Combat
+
+# In[ ]:
+
+
+def parse_day22(s):
+  players = {}
+  players_str = s.split("\n\n")
+  for player_str in players_str:
+    for line in player_str.split("\n"):
+      if line.startswith('Player'):
+        player_id = int(line.replace('Player ', '').replace(':',''))
+        players[player_id] = []
+      else:
+        players[player_id].append(int(line))
+  log.debug(f"[parse_day22] {players}")
+  return players
+
+def play_crabcardgame(players):
+  t = 0
+  player_keys = list(players.keys())
+  while(
+    min( mapl(lambda it: len(players[it]), player_keys) ) > 0
+  ):
+    draw = mapl(lambda it: players[it].pop(0), player_keys)
+    winner_idx = draw.index(max(draw))
+    #players[player_keys[winner_idx]] += sorted(draw, reverse=True)
+    loser_idx = (0 if winner_idx == 1 else 1)
+    players[player_keys[winner_idx]] += [draw[winner_idx], draw[loser_idx]] # winner's card first
+    t += 1
+    log.debug(f"[play_ccg] t={t} draw={draw} {players}")
+    if t > 1_000:
+      raise Exception("failsafe")
+  players['t'] = t
+  players['winner'] = player_keys[winner_idx]
+  return players
+
+def score_crabcardgame(players):
+  cardstack = players[players['winner']]
+  log.debug(f"[score_crabcardgame] cardstack={cardstack}")
+  cardstack = list(reversed(cardstack))
+  score = 0
+  for idx in range(len(cardstack)):
+    score += (idx+1) * cardstack[idx]
+  return score
+
+
+# In[ ]:
+
+
+tests = """
+Player 1:
+9
+2
+6
+3
+1
+
+Player 2:
+5
+8
+4
+7
+10
+""".strip()
+
+
+# In[ ]:
+
+
+players = parse_day22(tests)
+players = play_crabcardgame(players)
+res = score_crabcardgame(players)
+assert( 306 == res)
+
+
+# In[ ]:
+
+
+ins = aoc.read_file_to_str('in/day22.in').strip()
+players = parse_day22(ins)
+players = play_crabcardgame(players)
+res = score_crabcardgame(players)
+log.info(f"Day 22 part 1 solution: winning score={res}")
+
+
+# In[ ]:
+
+
+print("Day 22 b")
+
+def hashrep_of(player):
+  repres = str(player)
+  return hashlib.sha1(repres.encode()).hexdigest()
+
+def play_recursivecombat(players):#
+  t = 0
+  player_keys = list(players.keys())
+  player_seen_handhashes = set()
+  plcardnums = [len(players[1]), len(players[2])]
+  log.debug(f"[play_recursivecombat] plcard#={plcardnums} t={t} {players}")
+  for t in range(1, 100_000):
+    log.debug(f"t={t} init={players}")
+
+    # NOTE: The hands-already-seen condition had to be read VERY CAREFULLY !!!
+    player1_hashrep = hashrep_of(players[1])
+    player2_hashrep = hashrep_of(players[2])
+    if player1_hashrep in player_seen_handhashes and player2_hashrep in player_seen_handhashes:
+      ###                             NOTE THE **AND** in above condition !!!
+      log.debug(f"  current hands already seen")
+      hand_seen = True
+    else:
+      player_seen_handhashes.add(player1_hashrep)
+      player_seen_handhashes.add(player2_hashrep)
+      hand_seen = False
+
+    if hand_seen:
+      players['t'] = t
+      players['winner'] = player_keys[0]
+      players['win-cond'] = 'hand_already_seen'
+      log.debug(f"win-cond plcard#={plcardnums} already-played players={players}")
+      return players
+      
+    draw = mapl(lambda it: players[it].pop(0), player_keys)
+    log.debug(f"  t={t} draw={draw} keeping {players}")
+    if draw[0] <= len(players[1]) and draw[1] <= len(players[2]):
+      # both players have enough cards left
+      log.debug(f"  recursing")
+      recursed_players = copy.deepcopy(players)
+      # the quantity of cards copied is equal to the number on the card they drew to trigger the sub-game
+      if draw[0] < len(players[1]):
+        recursed_players[1] = recursed_players[1][:draw[0]] # cut the stack to size for recursion
+      if draw[1] < len(players[2]):
+        recursed_players[2] = recursed_players[2][:draw[1]] # cut the stack to size for recursion
+      recursed_players = play_recursivecombat(recursed_players)
+      winner = recursed_players['winner']
+    else:
+      winner = draw.index(max(draw)) + 1
+    winner_idx = winner - 1
+    loser_idx = (0 if winner_idx == 1 else 1)
+    players[winner] += [draw[winner_idx], draw[loser_idx]] # winner's card first
+    if min( mapl(lambda it: len(players[it]), player_keys) ) <= 0:
+      players['t'] = t
+      players['winner'] = winner
+      players['win-cond'] = '1player_out_of_cards'
+      log.debug(f"win-cond plcard#={plcardnums} 1-player-run-outof-cards players={players}")
+      return players
+  raise Exception("failsafe")
+  
+
+
+# In[ ]:
+
+
+players = play_recursivecombat(parse_day22(tests))
+res = score_crabcardgame(players)
+assert( 291 == res )
+
+
+# In[ ]:
+
+
+tests_loop = """
+Player 1:
+43
+19
+
+Player 2:
+2
+29
+14
+""".strip()
+res = play_recursivecombat(parse_day22(tests_loop))
+assert( res['win-cond'] == 'hand_already_seen' )
+
+
+# In[ ]:
+
+
+#log.setLevel(logging.INFO)
+players = play_recursivecombat(parse_day22(ins))
+log.info(f"recursive-combat result for ins: {players}")
+res = score_crabcardgame(players)
+log.info(f"Day 22 part 2 solution: recursive-combat winner-score={res}")
 
 
 # In[ ]:
