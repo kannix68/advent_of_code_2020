@@ -4612,6 +4612,245 @@ res = score_crabcardgame(players)
 log.info(f"Day 22 part 2 solution: recursive-combat winner-score={res}")
 
 
+# ### Day 23: Crab Cups
+
+# In[ ]:
+
+
+def play_crabcups_round(l):
+  #orig_lst = l.copy()
+  list_len = len(l)
+  current = l[0]
+  taken = [l.pop(1), l.pop(1), l.pop(1)] # take 3
+  next_val = current - 1
+  while(True):
+    if next_val in l:
+      next_idx = l.index(next_val)
+      break
+    else:
+      next_val -= 1
+      if next_val <= 0:
+        next_val = max(l)
+  log.debug(f"[play_crabcups_round] head={current}, taken={taken}, dest={next_val}")
+  new_list = [next_val]
+  new_list = new_list + taken
+  appending = False
+  for val in itertools.cycle(l):
+    if not appending:
+      if val == next_val:
+        appending = True
+    else:
+      new_list.append(val)
+      if len(new_list) >= list_len:
+        break
+  log.debug(f"  new_list={new_list}")
+  tgt_idx = (new_list.index(current)+1) % list_len
+  new_list2 = new_list[tgt_idx:] + new_list[:tgt_idx]
+  log.debug(f"  new_list2={new_list2}")
+  return new_list2
+
+def play_crabcups_game(l, rounds=1):
+  log.info(f"[play_crabcups_game] started: l={l}, rounds={rounds}")
+  lst = l.copy()
+  for i in range(1, rounds+1):
+    lst = play_crabcups_round(lst)
+    log.debug(f" round={i} l={lst}")
+  return lst
+
+def score_crabcups_game(l):
+  tgt_idx = (l.index(1)+1) % len(l)
+  if tgt_idx == 0:
+      outlst = l[tgt_idx, len(l)-1]
+  else:
+    outlst = l[tgt_idx:] + l[:tgt_idx-1]
+  return int( str.join('', mapl(str,outlst)) )
+
+
+# In[ ]:
+
+
+tests = "389125467"
+test_lst = mapl(int, list(tests))
+res = play_crabcups_game(test_lst, rounds=10)
+log.info(f"test result={res}")
+score = score_crabcups_game(res)
+log.info(f"test result  10rds score={score}")
+assert( 92658374 == score )
+
+res = play_crabcups_game(test_lst, rounds=100)
+score = score_crabcups_game(res)
+log.info(f"test result 100rds score={score}")
+assert( 67384529 == score)
+
+
+# In[ ]:
+
+
+ins = aoc.read_file_to_str('in/day23.in').strip()
+ins_lst = mapl(int, list(ins))
+res = play_crabcups_game(ins_lst, rounds=100)
+log.info(f"Day 23 part 1 result={res}")
+score = score_crabcups_game(res)
+log.info(f"Day 23 part 1 solution: result 100rds score={score}")
+
+
+# In[ ]:
+
+
+print("Day 23 b")
+
+def assemble_crabcups2_list(l, num_cups = 1_000_000):
+  """Get a cups-list according to part 2 requirements (1mio cups)."""
+  out_lst = l.copy()
+  max_val = max(l)
+  num_new_cups = num_cups - len(out_lst)
+  out_lst += list(range(max_val+1, num_cups+1))
+  assert( num_cups == len(out_lst) )
+  return out_lst
+
+def play_crabcups_round_opt(l, rounds=1):
+  """Optimize play of crabcups for n rounds, using cycling LinkedList instead of list."""
+  start_tm = int(time.time())
+  list_len = len(l)
+  lkl = {}
+  #firstval = l[0]
+  #lastval = l[-1]
+  curval = l[0]
+  for idx, val in enumerate(l):
+    next_idx = idx+1
+    if next_idx == list_len:
+      next_idx = 0
+    lkl[val] = l[next_idx]
+  for rd in range(rounds):
+    # The crab picks up the three cups that are immediately clockwise of the current cup.
+    # They are removed from the circle;
+    # cup spacing is adjusted as necessary to maintain the circle.
+    n1 = lkl[curval]
+    n2 = lkl[n1]
+    n3 = lkl[n2]
+    lkl[curval] = lkl[n3]
+    #log.trace(f"  re-chained from current={curval} to={lkl[n3]}, taken={[n1, n2, n3]}")
+    
+    # The crab selects a destination cup:
+    # the cup with a label equal to the current cup's label minus one.
+    # If this would select one of the cups that was just picked up,
+    # the crab will keep subtracting one until it finds a cup
+    # that wasn't just picked up.
+    # If at any point in this process the value goes below
+    # the lowest value on any cup's label, it wraps around
+    # to the highest value on any cup's label instead.
+    for _ in range(list_len):
+      if _ == 0:
+        nextval = curval
+      nextval -= 1
+      #log.trace(f"    chknextval={nextval}")
+      if nextval in [n1, n2, n3]:
+        #log.trace(f"      is in outtakes")
+        continue
+      if nextval <= 0:
+        nextval = max(lkl.keys())+1
+        continue
+      else:
+        break
+    #log.trace(f"  current={curval} picked={[n1, n2, n3]}, dest={nextval}")
+    # The crab places the cups it just picked up
+    # so that they are immediately clockwise of the destination cup.
+    # They keep the same order as when they were picked up.
+    next_end_val = lkl[nextval] # store end value
+    lkl[nextval] = n1 # break open the chain
+    # lkl[n1] == n2
+    # lkl[n2] == n3
+    lkl[n3] = next_end_val # close the chain again
+
+    # The crab selects a new current cup:
+    #  the cup which is immediately clockwise of the current cup
+    curval = lkl[curval]
+    if rd % 1_000_000 == 0:
+      took_tm = int(time.time()) - start_tm
+      log.info(f"round={rd:,} time_taken sofar {took_tm}s")
+
+  out_lst = []
+  for i in range(list_len):
+    if i == 0:
+      #last_val = 1
+      last_val = curval
+    out_lst.append(last_val)
+    last_val = lkl[last_val]
+  
+  return out_lst
+
+def play_crabcups_game_opt(l, rounds=1):
+  log.info(f"[play_crabcups_game] started: l={l}, rounds={rounds}")
+  #lst = l.copy()
+  return play_crabcups_round_opt(l, rounds)
+
+def score_crabcups_game_part2(l):
+  lst_len = len(l)
+  tgt_idx = (l.index(1)+1) % len(l)
+  if tgt_idx < lst_len - 2:
+    subl = l[tgt_idx : tgt_idx+2]
+    #log.info(subl)
+  else:
+    tgtidx1 = (tgt_idx+1) % lst_len
+    tgtidx2 = (tgt_idx+2) % lst_len
+    subl = [l[tgtidx1], l[tgtidx2]]
+  assert( 2 == len(subl) )
+  return subl[0] * subl[1]
+
+
+# In[ ]:
+
+
+# check part 1 game results and scores still valid...
+tests = "389125467"
+test_lst = mapl(int, list(tests))
+res = play_crabcups_game_opt(test_lst, rounds=10)
+log.info(f"test result={res}")
+score1 = score_crabcups_game(res)
+log.info(f"test result  10rds score part 1={score1}")
+log.info(f"test result  10rds score part 2={score}")
+assert( 92658374 == score1 )
+score = score_crabcups_game_part2(res)
+
+# still valid...
+ins = aoc.read_file_to_str('in/day23.in').strip()
+ins_lst = mapl(int, list(ins))
+res = play_crabcups_game_opt(ins_lst, rounds=100)
+log.info(f"Day 23 part 1 result={res}")
+score1 = score_crabcups_game(res)
+log.info(f"Day 23 part 1 solution: result 100rds score={score1}")
+score = score_crabcups_game_part2(res)
+log.info(f"Day 23 part 2 check: result 100rds score2={score}")
+assert( 74698532 == score1 )
+
+
+# In[ ]:
+
+
+# test with long list for part 2
+test2_lst = assemble_crabcups2_list(test_lst, num_cups = 1_000_000)
+log.info("done")
+assert( 1_000_000 == len(test2_lst) )
+
+res = play_crabcups_game_opt(test2_lst, rounds=10_000_000)
+log.info("done2")
+score2 = score_crabcups_game_part2(res)
+log.info(f"score2={score2}")
+
+assert( 1_000_000 == len(res) )
+assert( 149245887792 == score2 )
+
+
+# In[ ]:
+
+
+ins2_lst = assemble_crabcups2_list(ins_lst, num_cups = 1_000_000)
+res = play_crabcups_game_opt(ins2_lst, rounds=10_000_000)
+log.info("done2")
+score2 = score_crabcups_game_part2(res)
+log.info(f"Day 23 part 2 solution: score2={score2}")
+
+
 # In[ ]:
 
 
