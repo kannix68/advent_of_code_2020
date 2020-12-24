@@ -4851,6 +4851,210 @@ score2 = score_crabcups_game_part2(res)
 log.info(f"Day 23 part 2 solution: score2={score2}")
 
 
+# ### Day 24: Lobby Layout
+# 
+# Hexagonal geometry and hexagonal 2d-coordinates.
+# 
+# See red blob games site [Hexagonal Grids](https://www.redblobgames.com/grids/hexagons/)
+# for thorough explanations.
+# Thanks to colleague P S for the hint!  \
+# Last used in Advent of Code 2017, day 11.  \
+# Todays aoc hint: [Hexagonal tiling - Wikipedia](https://en.wikipedia.org/wiki/Hexagonal_tiling)
+# 
+
+# In[ ]:
+
+
+def cl(l):
+  """Return compact list str representation."""
+  return str(l).replace(', ',',')
+
+#  Using pointy topped grid/geometry and axial coordinates.
+#  Using axis notation [q,r] here, q is west>east and r is south>north
+hex2d_axial_pt_translations = {'e':[1,0], 'w':[-1,0], 'se':[0,1], 'sw':[-1,1], 'ne':[+1,-1], 'nw':[0,-1]}
+
+def hex_axial_distance(a, b):
+  return int((abs(a[0] - b[0]) + abs(a[0] + a[1] - b[0] - b[1]) + abs(a[1] - b[1])) / 2)
+
+# east, southeast, southwest, west, northwest, and northeast
+# => e, se, sw, w, nw, and ne
+def parse_day24_line(s):
+  log.debug(f"parse_day24_line in={s}")
+  out_trs = []
+  while len(s) > 0:
+    log.trace(f"out_trs={out_trs} rest={s}")
+    if len(s)>= 2 and s[:2] in ['se','sw','nw','ne']:
+      out_trs.append(s[:2])
+      s = s[2:]
+    elif len(s)>= 1 and s[:1] in ['e','w']:
+      out_trs.append(s[:1])
+      s = s[1:]
+    else:
+      raise Exception(f"unforeseen: {s}")
+  log.debug(f"parse_day24_line returns {cl(out_trs)}")
+  return out_trs
+  
+def parse_day24(los):
+  return mapl(lambda it: parse_day24_line(it), los)
+
+def flip_day24_line(steps):
+  #flips = defaultdict(int)
+  c = (0,0)
+  for step in steps:
+    trans = hex2d_axial_pt_translations[step]
+    c = (c[0]+trans[0], c[1]+trans[1])
+  #flips[c] += 1
+  #return flips
+  return c
+
+def flip_day24_lines(steps_lol):
+  flips = defaultdict(int)
+  c = (0,0)
+  for steps in steps_lol:
+    c = flip_day24_line(steps)
+    flips[c] += 1
+  return flips
+
+
+# In[ ]:
+
+
+test1 = 'esew'
+flip_day24_line( parse_day24_line(test1) )
+
+
+# In[ ]:
+
+
+test2 = 'nwwswee'
+flip_day24_line( parse_day24_line(test2) ) 
+
+
+# In[ ]:
+
+
+tests = """
+sesenwnenenewseeswwswswwnenewsewsw
+neeenesenwnwwswnenewnwwsewnenwseswesw
+seswneswswsenwwnwse
+nwnwneseeswswnenewneswwnewseswneseene
+swweswneswnenwsewnwneneseenw
+eesenwseswswnenwswnwnwsewwnwsene
+sewnenenenesenwsewnenwwwse
+wenwwweseeeweswwwnwwe
+wsweesenenewnwwnwsenewsenwwsesesenwne
+neeswseenwwswnwswswnw
+nenwswwsewswnenenewsenwsenwnesesenew
+enewnwewneswsewnwswenweswnenwsenwsw
+sweneswneswneneenwnewenewwneswswnese
+swwesenesewenwneswnwwneseswwne
+enesenwswwswneneswsenwnewswseenwsese
+wnwnesenesenenwwnenwsewesewsesesew
+nenewswnwewswnenesenwnesewesw
+eneswnwswnwsenenwnwnwwseeswneewsenese
+neswnwewnwnwseenwseesewsenwsweewe
+wseweeenwnesenwwwswnew
+""".strip().split("\n")
+flips = flip_day24_lines( parse_day24(tests) )
+tiles_black = filterl(lambda it: flips[it] % 2 == 1, flips.keys())
+log.info(f"Day 24 part 1 tests solutions: black tiles#={len(tiles_black)}") #" from {tiles_black}")
+assert( 10 == len(tiles_black))
+
+
+# In[ ]:
+
+
+ins = aoc.read_file_to_list('in/day24.in')
+flips = flip_day24_lines( parse_day24(ins) )
+tiles_black = filterl(lambda it: flips[it] % 2 == 1, flips.keys())
+log.info(f"Day 24 part 1 solution: black tiles#={len(tiles_black)}") #" from {tiles_black}")
+
+
+# In[ ]:
+
+
+print("Day 24 b")
+
+# cellular automaton on this hexagonal tile geometry space
+
+def get_extents(tiles_black):
+  qs = mapl(lambda it: it[0], tiles_black)
+  rs = mapl(lambda it: it[1], tiles_black)
+  return [[min(qs), max(qs)], [min(rs), max(rs)]]
+  
+
+def num_neighbors(c, tiles_black):
+  nsum = 0
+  for tilec in tiles_black:
+    #if c != tilec and hex_axial_distance(c, tilec) == 1:
+    if hex_axial_distance(c, tilec) == 1:
+      log.trace(f"{tilec} is neib of {c}")
+      nsum += 1
+  assert( nsum <= 6 )
+  return nsum
+
+def cell_automate(tiles_black, rounds = 1):
+  exts = get_extents(tiles_black)
+  log.info(f"[cell_automate] at round 0: num-tiles-black={len(tiles_black)}; extents={exts}") #" from {sorted(tiles_black)}")
+  start_tm = int(time.time())
+  for rnd in range(1, rounds+1):
+    new_tiles_black = tiles_black.copy()
+    exts = get_extents(tiles_black)
+    log.debug(f"round {rnd}: extents found={exts}")
+    q_min, q_max = exts[0]
+    r_min, r_max = exts[1]
+
+    for q in range(q_min-1, q_max+1+1):
+      for r in range(r_min-1, r_max+1+1):
+        c = (q, r)
+        nneibs = num_neighbors(c, tiles_black)
+        if c in tiles_black:
+          if nneibs == 0 or nneibs > 2:
+            log.debug(f"flip-to-white {c} nneibs={nneibs}")
+            new_tiles_black.remove(c)
+        else:
+          if nneibs == 2:
+            log.debug(f"flip-to-black {c} nneibs={nneibs}")
+            new_tiles_black.append(c)
+    tiles_black = new_tiles_black
+    took_tm = int(time.time()) - start_tm
+    log.info(f"  after round {rnd} @{took_tm:>5}s: num-tiles-black={len(tiles_black)}; extents={exts}") #" from {sorted(tiles_black)}")
+  log.info(f"[cell_automate] finished round {rnd}: num-tiles-black={len(tiles_black)}; extents={exts}") #" from {sorted(tiles_black)}")
+  return tiles_black
+
+flips = flip_day24_lines( parse_day24(tests) )
+tiles_black = filterl(lambda it: flips[it] % 2 == 1, flips.keys())
+assert 10 == len(tiles_black)
+
+tiles_black2 = cell_automate(tiles_black, rounds=1)
+assert 15 == len(tiles_black2)
+
+tiles_black2 = cell_automate(tiles_black, rounds=2)
+assert 12 == len(tiles_black2)
+
+tiles_black2 = cell_automate(tiles_black, rounds=10)
+assert 37 == len(tiles_black2)
+
+tiles_black2 = cell_automate(tiles_black, rounds=20)
+assert 132 == len(tiles_black2)
+
+if EXEC_RESOURCE_HOGS:
+  tiles_black2 = cell_automate(tiles_black, rounds=100)
+  assert 2208 == len(tiles_black2)
+
+
+# In[ ]:
+
+
+if EXEC_RESOURCE_HOGS:
+  flips = flip_day24_lines( parse_day24(ins) )
+  tiles_black = filterl(lambda it: flips[it] % 2 == 1, flips.keys())
+  log.info(f"Day 24 part 1 solution: black tiles#={len(tiles_black)}") #" from {tiles_black}")
+  tiles_black2 = cell_automate(tiles_black, rounds=100)
+  log.info(f"Day 24 part 2 solution: black tiles#={len(tiles_black2)}") #" from {tiles_black}")
+  # took 1496 seconds!
+
+
 # In[ ]:
 
 
