@@ -5055,6 +5055,68 @@ if EXEC_RESOURCE_HOGS:
   # took 1496 seconds!
 
 
+# ### Day 24: Combo Breaker
+
+# In[ ]:
+
+
+def find_loopsize(pubkey, max_iter=100_000):
+  subjectnum = 7
+  val = 1
+  for i in range(1, max_iter+1):
+    val = (val * subjectnum) % 20201227
+    if val == pubkey:
+      break
+  if i == max_iter:
+    raise Exception("failsafe")
+  return i
+
+def encrypt_day25(subjectnum=7, loopsize=None):
+  log.info(f"[encrypt_day25] subject#={subjectnum}, loopsize={loopsize}")
+  val = 1
+  for i in range(loopsize):
+    val = (val * subjectnum) % 20201227
+  return val
+
+
+# In[ ]:
+
+
+tests = """
+5764801
+17807724
+""".strip()
+
+
+# In[ ]:
+
+
+card_pubkey, door_pubkey = mapl(int, tests.split("\n"))
+log.info("tests card-pubkey={card_pubkey}, door pubkey=(door_pubkey)")
+
+card_loopsize = find_loopsize(card_pubkey)
+door_loopsize = find_loopsize(door_pubkey)
+log.info(f"tests result: card-loopsize={card_loopsize}, door_loopsize={door_loopsize}")
+t1 = encrypt_day25(subjectnum=door_pubkey, loopsize=card_loopsize)
+t2 = encrypt_day25(subjectnum=card_pubkey, loopsize=door_loopsize)
+log.info(f"tests result: encryption key={t1} : encrypted {t1} =? {t2}")
+assert( t1 == t2 )
+
+
+# In[ ]:
+
+
+ins = aoc.read_file_to_list('in/day25.in')
+card_pubkey, door_pubkey = mapl(int, ins)
+log.info(f"card-pubkey={card_pubkey}, door pubkey={door_pubkey}")
+card_loopsize = find_loopsize(card_pubkey, max_iter=10_000_000)
+door_loopsize = find_loopsize(door_pubkey, max_iter=10_000_000)
+log.info(f"intermed result: card-loopsize={card_loopsize:,}, door_loopsize={door_loopsize:,}")
+t1 = encrypt_day25(subjectnum=door_pubkey, loopsize=card_loopsize)
+t2 = encrypt_day25(subjectnum=card_pubkey, loopsize=door_loopsize)
+log.info(f"Day 25 solution: encryption key={t1} : encrypted {t1} =? {t2}")
+
+
 # In[ ]:
 
 
